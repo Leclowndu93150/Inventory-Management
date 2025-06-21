@@ -3,10 +3,14 @@ package com.leclowndu93150.inventorymanagement.client;
 import com.leclowndu93150.inventorymanagement.InventoryManagementMod;
 import com.leclowndu93150.inventorymanagement.client.gui.InventoryManagementButton;
 import com.leclowndu93150.inventorymanagement.client.gui.screen.PerScreenPositionEditScreen;
+import com.leclowndu93150.inventorymanagement.client.network.ClientNetworking;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -29,13 +33,55 @@ public class InventoryManagementClientMod {
             "inventorymanagement.keybind.category"
     ));
 
+    public static final Lazy<KeyMapping> SORT_PLAYER = Lazy.of(() -> new KeyMapping(
+            "inventorymanagement.keybind.sort.player",
+            GLFW.GLFW_KEY_UNKNOWN,
+            "inventorymanagement.keybind.category"
+    ));
+
+    public static final Lazy<KeyMapping> SORT_CONTAINER = Lazy.of(() -> new KeyMapping(
+            "inventorymanagement.keybind.sort.container",
+            GLFW.GLFW_KEY_UNKNOWN,
+            "inventorymanagement.keybind.category"
+    ));
+
+    public static final Lazy<KeyMapping> TRANSFER_TO_CONTAINER = Lazy.of(() -> new KeyMapping(
+            "inventorymanagement.keybind.transfer.to_container",
+            GLFW.GLFW_KEY_UNKNOWN,
+            "inventorymanagement.keybind.category"
+    ));
+
+    public static final Lazy<KeyMapping> TRANSFER_FROM_CONTAINER = Lazy.of(() -> new KeyMapping(
+            "inventorymanagement.keybind.transfer.from_container",
+            GLFW.GLFW_KEY_UNKNOWN,
+            "inventorymanagement.keybind.category"
+    ));
+
+    public static final Lazy<KeyMapping> STACK_TO_PLAYER = Lazy.of(() -> new KeyMapping(
+            "inventorymanagement.keybind.stack.to_player",
+            GLFW.GLFW_KEY_UNKNOWN,
+            "inventorymanagement.keybind.category"
+    ));
+
+    public static final Lazy<KeyMapping> STACK_TO_CONTAINER = Lazy.of(() -> new KeyMapping(
+            "inventorymanagement.keybind.stack.to_container",
+            GLFW.GLFW_KEY_UNKNOWN,
+            "inventorymanagement.keybind.category"
+    ));
+
     @SubscribeEvent
     public static void registerKeys(RegisterKeyMappingsEvent event) {
         event.register(POSITION_EDIT_PLAYER.get());
         event.register(POSITION_EDIT_CONTAINER.get());
+        event.register(SORT_PLAYER.get());
+        event.register(SORT_CONTAINER.get());
+        event.register(TRANSFER_TO_CONTAINER.get());
+        event.register(TRANSFER_FROM_CONTAINER.get());
+        event.register(STACK_TO_PLAYER.get());
+        event.register(STACK_TO_CONTAINER.get());
     }
 
-    @EventBusSubscriber(modid = InventoryManagementMod.MOD_ID,value = Dist.CLIENT)
+    @EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, value = Dist.CLIENT)
     public static class ClientEvents {
         @SubscribeEvent
         public static void onScreenInit(ScreenEvent.Init.Post event) {
@@ -59,7 +105,51 @@ public class InventoryManagementClientMod {
             } else if (POSITION_EDIT_CONTAINER.get().matches(event.getKeyCode(), event.getScanCode())) {
                 Minecraft.getInstance().setScreen(new PerScreenPositionEditScreen(screen, false));
                 event.setCanceled(true);
+            } else if (SORT_PLAYER.get().matches(event.getKeyCode(), event.getScanCode())) {
+                ClientNetworking.sendSort(true);
+                event.setCanceled(true);
+            } else if (SORT_CONTAINER.get().matches(event.getKeyCode(), event.getScanCode())) {
+                ClientNetworking.sendSort(false);
+                event.setCanceled(true);
+            } else if (TRANSFER_TO_CONTAINER.get().matches(event.getKeyCode(), event.getScanCode())) {
+                ClientNetworking.sendTransfer(false);
+                event.setCanceled(true);
+            } else if (TRANSFER_FROM_CONTAINER.get().matches(event.getKeyCode(), event.getScanCode())) {
+                ClientNetworking.sendTransfer(true);
+                event.setCanceled(true);
+            } else if (STACK_TO_PLAYER.get().matches(event.getKeyCode(), event.getScanCode())) {
+                ClientNetworking.sendStack(true);
+                event.setCanceled(true);
+            } else if (STACK_TO_CONTAINER.get().matches(event.getKeyCode(), event.getScanCode())) {
+                ClientNetworking.sendStack(false);
+                event.setCanceled(true);
             }
+        }
+
+        @SubscribeEvent
+        public static void onMouseClicked(ScreenEvent.MouseButtonPressed.Pre event) {
+            if (event.getButton() != GLFW.GLFW_MOUSE_BUTTON_MIDDLE) return;
+
+            Screen screen = event.getScreen();
+            if (!(screen instanceof AbstractContainerScreen<?> containerScreen)) return;
+
+            Slot hoveredSlot = containerScreen.getSlotUnderMouse();
+            if (hoveredSlot == null) return;
+
+            boolean isPlayerInventory = hoveredSlot.container instanceof Inventory;
+
+            // Skip if it's the hotbar (first 9 slots of player inventory)
+            if (isPlayerInventory && hoveredSlot.getSlotIndex() < Inventory.getSelectionSize()) {
+                return;
+            }
+
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft.player != null) {
+                minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.25F, 1.0F);
+            }
+
+            ClientNetworking.sendSort(isPlayerInventory);
+            event.setCanceled(true);
         }
     }
 }

@@ -7,6 +7,7 @@ import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 
@@ -41,11 +42,10 @@ public class PerScreenPositionEditScreen extends Screen {
     protected void init() {
         super.init();
 
+        this.buttons.clear();
         this.buttons.addAll(this.isPlayerInventory ?
                 InventoryButtonsManager.INSTANCE.getPlayerButtons() :
                 InventoryButtonsManager.INSTANCE.getContainerButtons());
-
-        parent.children().removeIf(child -> child instanceof InventoryManagementButton);
 
         int buttonY = this.height - BUTTON_HEIGHT - 10;
         int totalWidth = BUTTON_WIDTH * 3 + BUTTON_SPACING * 2;
@@ -53,6 +53,10 @@ public class PerScreenPositionEditScreen extends Screen {
 
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> {
             InventoryManagementConfig.getInstance().setScreenPosition(parent, isPlayerInventory, currentPosition);
+            if (parent instanceof AbstractContainerScreen<?> containerScreen) {
+                parent.clearWidgets();
+                parent.init(minecraft, width, height);
+            }
             this.minecraft.setScreen(parent);
         }).bounds(buttonX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT).build());
 
@@ -66,6 +70,10 @@ public class PerScreenPositionEditScreen extends Screen {
         buttonX += BUTTON_WIDTH + BUTTON_SPACING;
 
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, button -> {
+            if (parent instanceof AbstractContainerScreen<?>) {
+                parent.clearWidgets();
+                parent.init(minecraft, width, height);
+            }
             this.minecraft.setScreen(parent);
         }).bounds(buttonX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT).build());
 
@@ -75,16 +83,18 @@ public class PerScreenPositionEditScreen extends Screen {
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0, 0, -51);
-        this.parent.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.pose().translate(0, 0, -100);
+        this.parent.render(guiGraphics, -1, -1, partialTick);
         guiGraphics.pose().popPose();
+
+        guiGraphics.fill(0, 0, this.width, this.height, 0x80000000);
 
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         this.buttons.forEach(button -> button.render(guiGraphics, mouseX, mouseY, partialTick));
 
         guiGraphics.drawString(this.font,
-                this.currentPosition.toString(),
+                "Position: " + this.currentPosition.toString(),
                 4,
                 4,
                 0xFFFFFF);
@@ -94,23 +104,42 @@ public class PerScreenPositionEditScreen extends Screen {
                 this.width / 2,
                 20,
                 0xFFFFFF);
+
+        guiGraphics.drawCenteredString(this.font,
+                Component.literal("Drag to move buttons or use arrow keys"),
+                this.width / 2,
+                35,
+                0xAAAAAA);
+
+        guiGraphics.drawCenteredString(this.font,
+                Component.literal("Hold Shift for faster movement"),
+                this.width / 2,
+                48,
+                0xAAAAAA);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // Check if clicking on our control buttons first
+        if (super.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
+
+        // Otherwise start dragging
         if (button == 0) {
             this.isDragging = true;
             this.dragStartX = (int) mouseX - this.currentPosition.x();
             this.dragStartY = (int) mouseY - this.currentPosition.y();
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return false;
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (button == 0) {
             this.isDragging = false;
+            return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
     }
@@ -130,6 +159,10 @@ public class PerScreenPositionEditScreen extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == InputConstants.KEY_ESCAPE) {
+            if (parent instanceof AbstractContainerScreen<?>) {
+                parent.clearWidgets();
+                parent.init(minecraft, width, height);
+            }
             this.minecraft.setScreen(parent);
             return true;
         }
@@ -155,6 +188,10 @@ public class PerScreenPositionEditScreen extends Screen {
 
     @Override
     public void onClose() {
+        if (parent instanceof AbstractContainerScreen<?>) {
+            parent.clearWidgets();
+            parent.init(minecraft, width, height);
+        }
         this.minecraft.setScreen(parent);
     }
 

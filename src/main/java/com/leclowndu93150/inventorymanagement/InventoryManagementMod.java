@@ -20,6 +20,4 @@ public final class InventoryManagementMod {
         Networking.register(modEventBus);
     }
 
-    //TODO Keybinding for each type of sorting
-    //TODO fix the edit screen buttons not working
 }
