@@ -16,7 +16,7 @@ repositories {
 }
 
 base {
-    archivesName = mod_id
+    archivesName = mod_id+"-1.21.1-NeoForge-"
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
@@ -100,6 +100,8 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 dependencies {
     runtimeOnly "curse.maven:mekanism-268560:6486993"
+    runtimeOnly "curse.maven:ellies-storage-options-1225370:6483390"
+    runtimeOnly "curse.maven:kotlin-for-forge-351264:6497906"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

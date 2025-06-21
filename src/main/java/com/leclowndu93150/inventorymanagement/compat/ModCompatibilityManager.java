@@ -79,7 +79,7 @@ public class ModCompatibilityManager {
 
         // Vanilla
 
-        blacklistPattern("net.minecraft.client.gui.screens.inventory.CreativeModInventoryScreen*");
+        blacklistPattern("net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen*");
 
         // Storage Drawers
         if (ModList.get().isLoaded("storagedrawers")) {
@@ -114,10 +114,6 @@ public class ModCompatibilityManager {
         if (ModList.get().isLoaded("quark")) {
             knownStorageContainers.add("vazkii.quark.content.management.module");
         }
-
-        if(ModList.get().isLoaded("mekanism")){
-            registerPattern("mekanism.common.registration.impl.ContainerTypeDeferredRegister*", ContainerOverride.allowAll());
-        }
     }
 
     public void registerPattern(String pattern, ContainerOverride override) {
@@ -129,6 +125,10 @@ public class ModCompatibilityManager {
     }
 
     public boolean isStorageContainer(Container container, AbstractContainerMenu menu) {
+        return isStorageContainer(container, menu, null);
+    }
+
+    public boolean isStorageContainer(Container container, AbstractContainerMenu menu, String screenClass) {
         if (container instanceof Inventory) return false;
 
         String containerClass = container.getClass().getName();
@@ -136,7 +136,8 @@ public class ModCompatibilityManager {
 
         // Check blacklist first
         for (String pattern : blacklistedContainers) {
-            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern)) {
+            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern) || 
+                (screenClass != null && matchesPattern(screenClass, pattern))) {
                 return false;
             }
         }
@@ -149,7 +150,7 @@ public class ModCompatibilityManager {
         }
 
         // Check overrides
-        ContainerOverride override = getOverride(containerClass, menuClass);
+        ContainerOverride override = getOverride(containerClass, menuClass, screenClass);
         if (override != null) {
             return override.allowSort();
         }
@@ -158,46 +159,61 @@ public class ModCompatibilityManager {
     }
 
     public boolean canTransferItems(Container container, AbstractContainerMenu menu) {
+        return canTransferItems(container, menu, null);
+    }
+
+    public boolean canTransferItems(Container container, AbstractContainerMenu menu, String screenClass) {
         String containerClass = container.getClass().getName();
         String menuClass = menu.getClass().getName();
 
         for (String pattern : blacklistedContainers) {
-            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern)) {
+            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern) ||
+                (screenClass != null && matchesPattern(screenClass, pattern))) {
                 return false;
             }
         }
 
-        ContainerOverride override = getOverride(containerClass, menuClass);
+        ContainerOverride override = getOverride(containerClass, menuClass, screenClass);
         if (override != null) {
             return override.allowTransfer();
         }
 
-        return isStorageContainer(container, menu);
+        return isStorageContainer(container, menu, screenClass);
     }
 
     public boolean canAutoStack(Container container, AbstractContainerMenu menu) {
+        return canAutoStack(container, menu, null);
+    }
+
+    public boolean canAutoStack(Container container, AbstractContainerMenu menu, String screenClass) {
         String containerClass = container.getClass().getName();
         String menuClass = menu.getClass().getName();
 
         // Check blacklist
         for (String pattern : blacklistedContainers) {
-            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern)) {
+            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern) ||
+                (screenClass != null && matchesPattern(screenClass, pattern))) {
                 return false;
             }
         }
 
-        ContainerOverride override = getOverride(containerClass, menuClass);
+        ContainerOverride override = getOverride(containerClass, menuClass, screenClass);
         if (override != null) {
             return override.allowStack();
         }
 
-        return isStorageContainer(container, menu);
+        return isStorageContainer(container, menu, screenClass);
     }
 
     private ContainerOverride getOverride(String containerClass, String menuClass) {
+        return getOverride(containerClass, menuClass, null);
+    }
+
+    private ContainerOverride getOverride(String containerClass, String menuClass, String screenClass) {
         for (Map.Entry<String, ContainerOverride> entry : containerOverrides.entrySet()) {
             String pattern = entry.getKey();
-            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern)) {
+            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern) ||
+                (screenClass != null && matchesPattern(screenClass, pattern))) {
                 return entry.getValue();
             }
         }
@@ -219,12 +235,8 @@ public class ModCompatibilityManager {
             return false;
         }
 
-        // Check if all slots are the same type (homogeneous container)
-        Class<?> firstSlotClass = containerSlots.get(0).getClass();
-        boolean homogeneous = containerSlots.stream()
-                .allMatch(slot -> slot.getClass() == firstSlotClass);
 
-        if (!homogeneous && !(container instanceof SimpleContainer)) {
+        if (!(container instanceof SimpleContainer)) {
             return false;
         }
 

@@ -114,23 +114,23 @@ public class InventoryButtonsManager {
         // Check if sorting is allowed for this container
         boolean canSort = false;
         ModCompatibilityManager compatManager = ModCompatibilityManager.getInstance();
+        String screenClass = screen.getClass().getName();
 
         if (inventory instanceof Inventory) {
-            // Player inventory - always allow
             canSort = true;
         } else if (inventory instanceof SimpleContainer) {
             // Vanilla simple containers
             if (this.sortableScreenHandlers.stream().anyMatch(clazz -> clazz.isInstance(screen.getMenu()))) {
                 canSort = true;
             } else {
-                canSort = compatManager.isStorageContainer(inventory, screen.getMenu());
+                canSort = compatManager.isStorageContainer(inventory, screen.getMenu(), screenClass);
             }
         } else {
             // Other containers (vanilla or modded)
             if (this.sortableInventories.stream().anyMatch(clazz -> clazz.isInstance(inventory))) {
                 canSort = true;
             } else {
-                canSort = compatManager.isStorageContainer(inventory, screen.getMenu());
+                canSort = compatManager.isStorageContainer(inventory, screen.getMenu(), screenClass);
             }
         }
 
@@ -176,6 +176,7 @@ public class InventoryButtonsManager {
 
         // Check if auto-stack is allowed for both containers
         ModCompatibilityManager compatManager = ModCompatibilityManager.getInstance();
+        String screenClass = screen.getClass().getName();
         boolean canStackFrom = false;
         boolean canStackTo = false;
 
@@ -186,13 +187,13 @@ public class InventoryButtonsManager {
             if (this.transferableScreenHandlers.stream().anyMatch(clazz -> clazz.isInstance(screen.getMenu()))) {
                 canStackFrom = true;
             } else {
-                canStackFrom = compatManager.canAutoStack(fromInventory, screen.getMenu());
+                canStackFrom = compatManager.canAutoStack(fromInventory, screen.getMenu(), screenClass);
             }
         } else {
             if (this.transferableInventories.stream().anyMatch(clazz -> clazz.isInstance(fromInventory))) {
                 canStackFrom = true;
             } else {
-                canStackFrom = compatManager.canAutoStack(fromInventory, screen.getMenu());
+                canStackFrom = compatManager.canAutoStack(fromInventory, screen.getMenu(), screenClass);
             }
         }
 
@@ -203,13 +204,13 @@ public class InventoryButtonsManager {
             if (this.transferableScreenHandlers.stream().anyMatch(clazz -> clazz.isInstance(screen.getMenu()))) {
                 canStackTo = true;
             } else {
-                canStackTo = compatManager.canAutoStack(toInventory, screen.getMenu());
+                canStackTo = compatManager.canAutoStack(toInventory, screen.getMenu(), screenClass);
             }
         } else {
             if (this.transferableInventories.stream().anyMatch(clazz -> clazz.isInstance(toInventory))) {
                 canStackTo = true;
             } else {
-                canStackTo = compatManager.canAutoStack(toInventory, screen.getMenu());
+                canStackTo = compatManager.canAutoStack(toInventory, screen.getMenu(), screenClass);
             }
         }
 
@@ -255,6 +256,7 @@ public class InventoryButtonsManager {
 
         // Check if transfer is allowed for both containers
         ModCompatibilityManager compatManager = ModCompatibilityManager.getInstance();
+        String screenClass = screen.getClass().getName();
         boolean canTransferFrom = false;
         boolean canTransferTo = false;
 
@@ -265,13 +267,13 @@ public class InventoryButtonsManager {
             if (this.transferableScreenHandlers.stream().anyMatch(clazz -> clazz.isInstance(screen.getMenu()))) {
                 canTransferFrom = true;
             } else {
-                canTransferFrom = compatManager.canTransferItems(fromInventory, screen.getMenu());
+                canTransferFrom = compatManager.canTransferItems(fromInventory, screen.getMenu(), screenClass);
             }
         } else {
             if (this.transferableInventories.stream().anyMatch(clazz -> clazz.isInstance(fromInventory))) {
                 canTransferFrom = true;
             } else {
-                canTransferFrom = compatManager.canTransferItems(fromInventory, screen.getMenu());
+                canTransferFrom = compatManager.canTransferItems(fromInventory, screen.getMenu(), screenClass);
             }
         }
 
@@ -282,13 +284,13 @@ public class InventoryButtonsManager {
             if (this.transferableScreenHandlers.stream().anyMatch(clazz -> clazz.isInstance(screen.getMenu()))) {
                 canTransferTo = true;
             } else {
-                canTransferTo = compatManager.canTransferItems(toInventory, screen.getMenu());
+                canTransferTo = compatManager.canTransferItems(toInventory, screen.getMenu(), screenClass);
             }
         } else {
             if (this.transferableInventories.stream().anyMatch(clazz -> clazz.isInstance(toInventory))) {
                 canTransferTo = true;
             } else {
-                canTransferTo = compatManager.canTransferItems(toInventory, screen.getMenu());
+                canTransferTo = compatManager.canTransferItems(toInventory, screen.getMenu(), screenClass);
             }
         }
 
