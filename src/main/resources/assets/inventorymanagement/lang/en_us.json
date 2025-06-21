@@ -1,0 +1,16 @@
+{
+  "inventorymanagement.keybind.category": "Inventory Management",
+  "inventorymanagement.keybind.position_edit.player": "Edit Player Inventory Buttons Position",
+  "inventorymanagement.keybind.position_edit.container": "Edit Container Buttons Position",
+
+  "inventorymanagement.button.sort_player": "Sort Player Inventory",
+  "inventorymanagement.button.sort_container": "Sort Container",
+  "inventorymanagement.button.autostack_into": "Stack Into Container",
+  "inventorymanagement.button.autostack_from": "Stack From Container",
+  "inventorymanagement.button.transfer_place": "Transfer All to Container",
+  "inventorymanagement.button.transfer_take": "Transfer All from Container",
+  "inventorymanagement.button.reset": "Reset",
+
+  "inventorymanagement.position_edit.title": "Edit Button Position",
+  "inventorymanagement.default_position_edit.title": "Edit Default Button Position"
+}
