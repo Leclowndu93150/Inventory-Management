@@ -4,6 +4,7 @@ import com.leclowndu93150.inventorymanagement.InventoryManagementMod;
 import com.leclowndu93150.inventorymanagement.client.gui.InventoryManagementButton;
 import com.leclowndu93150.inventorymanagement.client.gui.screen.PerScreenPositionEditScreen;
 import com.leclowndu93150.inventorymanagement.client.network.ClientNetworking;
+import com.leclowndu93150.inventorymanagement.debug.DebugManager;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -159,6 +160,14 @@ public class InventoryManagementClientMod {
 
             ClientNetworking.sendSort(isPlayerInventory);
             event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onScreenInit(ScreenEvent.Init.Post event) {
+        if (event.getScreen() instanceof AbstractContainerScreen<?> containerScreen) {
+            DebugManager.onScreenOpen(containerScreen);
+            InventoryButtonsManager.INSTANCE.init(containerScreen, event::addListener);
         }
     }
 }

@@ -77,6 +77,10 @@ public class ModCompatibilityManager {
         blacklistPattern("thedarkcolour.gendustry.menu.*");
         blacklistPattern("se.mickelus.tetra.blocks.workbench.*");
 
+        // Vanilla
+
+        blacklistPattern("net.minecraft.client.gui.screens.inventory.CreativeModInventoryScreen*");
+
         // Storage Drawers
         if (ModList.get().isLoaded("storagedrawers")) {
             blacklistPattern("com.jaquadro.minecraft.storagedrawers.*");
@@ -109,6 +113,10 @@ public class ModCompatibilityManager {
         //Quark
         if (ModList.get().isLoaded("quark")) {
             knownStorageContainers.add("vazkii.quark.content.management.module");
+        }
+
+        if(ModList.get().isLoaded("mekanism")){
+            registerPattern("mekanism.common.registration.impl.ContainerTypeDeferredRegister*", ContainerOverride.allowAll());
         }
     }
 
