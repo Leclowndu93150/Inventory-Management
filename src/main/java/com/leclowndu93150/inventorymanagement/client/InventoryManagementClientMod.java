@@ -4,6 +4,7 @@ import com.leclowndu93150.inventorymanagement.InventoryManagementMod;
 import com.leclowndu93150.inventorymanagement.client.gui.InventoryManagementButton;
 import com.leclowndu93150.inventorymanagement.client.gui.screen.PerScreenPositionEditScreen;
 import com.leclowndu93150.inventorymanagement.client.network.ClientNetworking;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -69,6 +70,13 @@ public class InventoryManagementClientMod {
             "inventorymanagement.keybind.category"
     ));
 
+    public static final Lazy<KeyMapping> SORT_HOVERED = Lazy.of(() -> new KeyMapping(
+            "inventorymanagement.keybind.sort.hovered",
+            InputConstants.Type.MOUSE,
+            GLFW.GLFW_MOUSE_BUTTON_MIDDLE,
+            "inventorymanagement.keybind.category"
+    ));
+
     @SubscribeEvent
     public static void registerKeys(RegisterKeyMappingsEvent event) {
         event.register(POSITION_EDIT_PLAYER.get());
@@ -79,6 +87,7 @@ public class InventoryManagementClientMod {
         event.register(TRANSFER_FROM_CONTAINER.get());
         event.register(STACK_TO_PLAYER.get());
         event.register(STACK_TO_CONTAINER.get());
+        event.register(SORT_HOVERED.get());
     }
 
     @EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, value = Dist.CLIENT)
@@ -128,7 +137,7 @@ public class InventoryManagementClientMod {
 
         @SubscribeEvent
         public static void onMouseClicked(ScreenEvent.MouseButtonPressed.Pre event) {
-            if (event.getButton() != GLFW.GLFW_MOUSE_BUTTON_MIDDLE) return;
+            if (event.getButton() != SORT_HOVERED.get().getKey().getValue()) return;
 
             Screen screen = event.getScreen();
             if (!(screen instanceof AbstractContainerScreen<?> containerScreen)) return;

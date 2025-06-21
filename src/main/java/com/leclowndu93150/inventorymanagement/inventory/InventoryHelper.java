@@ -1,11 +1,13 @@
 package com.leclowndu93150.inventorymanagement.inventory;
 
+import com.leclowndu93150.inventorymanagement.compat.ContainerAnalyzer;
 import com.leclowndu93150.inventorymanagement.inventory.sorting.ItemStackComparator;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.HorseInventoryMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -21,8 +23,73 @@ public class InventoryHelper {
         if (inventory instanceof Inventory) {
             sortInventory(inventory, SlotRange.playerMainRange());
         } else {
-            sortInventory(inventory);
+            AbstractContainerMenu menu = player.containerMenu;
+            ContainerAnalyzer.ContainerInfo info = ContainerAnalyzer.analyzeMenu(menu).get(inventory);
+
+            if (info != null) {
+                List<ItemStack> stacks = new ArrayList<>();
+                List<Integer> slotIndices = new ArrayList<>();
+
+                for (Slot slot : info.getSlots()) {
+                    if (slot.mayPickup(player) && slot.hasItem()) {
+                        stacks.add(slot.getItem().copy());
+                        slotIndices.add(slot.getSlotIndex());
+                    }
+                }
+
+                List<ItemStack> sortedStacks = mergeAndSortStacks(stacks);
+
+                // Clear original slots
+                for (Slot slot : info.getSlots()) {
+                    if (slot.mayPickup(player)) {
+                        slot.set(ItemStack.EMPTY);
+                    }
+                }
+
+                // Place sorted items back
+                int stackIndex = 0;
+                for (Slot slot : info.getSlots()) {
+                    if (slot.mayPickup(player) && stackIndex < sortedStacks.size()) {
+                        ItemStack toPlace = sortedStacks.get(stackIndex);
+                        if (slot.mayPlace(toPlace)) {
+                            slot.set(toPlace);
+                            stackIndex++;
+                        }
+                    }
+                }
+            } else {
+                sortInventory(inventory);
+            }
         }
+    }
+
+    private static List<ItemStack> mergeAndSortStacks(List<ItemStack> stacks) {
+        List<ItemStack> cleanedStacks = stacks.stream()
+                .filter(itemStack -> !itemStack.isEmpty())
+                .map(ItemStack::copy)
+                .collect(Collectors.toList());
+
+        // Merge similar stacks
+        for (int i = 0; i < cleanedStacks.size(); i++) {
+            for (int j = i + 1; j < cleanedStacks.size(); j++) {
+                ItemStack a = cleanedStacks.get(i);
+                ItemStack b = cleanedStacks.get(j);
+
+                if (areItemStacksMergeable(a, b)) {
+                    int itemsToShift = Math.min(a.getMaxStackSize() - a.getCount(), b.getCount());
+                    if (itemsToShift > 0) {
+                        a.grow(itemsToShift);
+                        b.shrink(itemsToShift);
+                    }
+                }
+            }
+        }
+
+        // Sort and filter empty stacks
+        return cleanedStacks.stream()
+                .filter(itemStack -> !itemStack.isEmpty())
+                .sorted(ItemStackComparator.comparator())
+                .collect(Collectors.toList());
     }
 
     private static void sortInventory(Container inventory) {
@@ -40,30 +107,7 @@ public class InventoryHelper {
             stacks.add(inventory.getItem(i).copy());
         }
 
-        List<ItemStack> cleanedStacks = stacks.stream()
-                .filter(itemStack -> !itemStack.isEmpty())
-                .map(ItemStack::copy)
-                .collect(Collectors.toList());
-
-        for (int i = 0; i < cleanedStacks.size(); i++) {
-            for (int j = i + 1; j < cleanedStacks.size(); j++) {
-                ItemStack a = cleanedStacks.get(i);
-                ItemStack b = cleanedStacks.get(j);
-
-                if (areItemStacksMergeable(a, b)) {
-                    int itemsToShift = Math.min(a.getMaxStackSize() - a.getCount(), b.getCount());
-                    if (itemsToShift > 0) {
-                        a.grow(itemsToShift);
-                        b.shrink(itemsToShift);
-                    }
-                }
-            }
-        }
-
-        List<ItemStack> sortedStacks = cleanedStacks.stream()
-                .filter(itemStack -> !itemStack.isEmpty())
-                .sorted(ItemStackComparator.comparator())
-                .collect(Collectors.toList());
+        List<ItemStack> sortedStacks = mergeAndSortStacks(stacks);
 
         for (int i = slotRange.min; i < slotRange.max; i++) {
             int j = i - slotRange.min;
@@ -94,39 +138,104 @@ public class InventoryHelper {
         }
 
         Inventory playerInventory = player.getInventory();
+        AbstractContainerMenu menu = player.containerMenu;
 
-        SlotRange playerSlotRange = SlotRange.playerMainRange();
-        SlotRange containerSlotRange = SlotRange.fullRange(containerInventory);
+        ContainerAnalyzer.ContainerInfo playerInfo = ContainerAnalyzer.getPlayerInventoryInfo(menu);
+        ContainerAnalyzer.ContainerInfo containerInfo = ContainerAnalyzer.getContainerInventoryInfo(menu);
 
-        if (player.containerMenu instanceof HorseInventoryMenu) {
-            containerSlotRange = SlotRange.horseMainRange(containerInventory);
-        }
+        if (playerInfo == null || containerInfo == null) {
+            SlotRange playerSlotRange = SlotRange.playerMainRange();
+            SlotRange containerSlotRange = SlotRange.fullRange(containerInventory);
 
-        if (fromPlayerInventory) {
-            transferEntireInventory(playerInventory,
-                    containerInventory,
-                    playerSlotRange,
-                    containerSlotRange,
-                    player.inventoryMenu,
-                    player.containerMenu,
-                    player
-            );
+            if (player.containerMenu instanceof HorseInventoryMenu) {
+                containerSlotRange = SlotRange.horseMainRange(containerInventory);
+            }
+
+            if (fromPlayerInventory) {
+                transferEntireInventory(playerInventory, containerInventory, playerSlotRange, containerSlotRange,
+                        player.inventoryMenu, player.containerMenu, player);
+            } else {
+                transferEntireInventory(containerInventory, playerInventory, containerSlotRange, playerSlotRange,
+                        player.containerMenu, player.inventoryMenu, player);
+            }
         } else {
-            transferEntireInventory(containerInventory,
-                    playerInventory,
-                    containerSlotRange,
-                    playerSlotRange,
-                    player.containerMenu,
-                    player.inventoryMenu,
-                    player
-            );
+            if (fromPlayerInventory) {
+                transferUsingSlots(playerInfo.getSlots(), containerInfo.getSlots(), player);
+            } else {
+                transferUsingSlots(containerInfo.getSlots(), playerInfo.getSlots(), player);
+            }
+        }
+    }
+
+    private static void transferUsingSlots(List<Slot> fromSlots, List<Slot> toSlots, Player player) {
+        for (Slot toSlot : toSlots) {
+            if (!toSlot.mayPickup(player)) continue;
+
+            for (Slot fromSlot : fromSlots) {
+                if (!fromSlot.mayPickup(player)) continue;
+
+                ItemStack fromStack = fromSlot.getItem();
+                if (fromStack.isEmpty()) continue;
+
+                ItemStack toStack = toSlot.getItem();
+
+                if (!toSlot.mayPlace(fromStack)) continue;
+
+                if (areItemStacksMergeable(toStack, fromStack)) {
+                    int space = toStack.getMaxStackSize() - toStack.getCount();
+                    int amount = Math.min(space, fromStack.getCount());
+                    if (amount > 0) {
+                        toStack.grow(amount);
+                        fromStack.shrink(amount);
+                        toSlot.set(toStack);
+                        fromSlot.set(fromStack.isEmpty() ? ItemStack.EMPTY : fromStack);
+                    }
+                } else if (toStack.isEmpty()) {
+                    toSlot.set(fromStack.copy());
+                    fromSlot.set(ItemStack.EMPTY);
+                    break;
+                }
+            }
         }
     }
 
     private static void autoStackInventories(
             Container from, Container to, Player player
     ) {
-        autoStackInventories(from, to, SlotRange.fullRange(from), SlotRange.fullRange(to), player);
+        AbstractContainerMenu menu = player.containerMenu;
+        ContainerAnalyzer.ContainerInfo fromInfo = ContainerAnalyzer.analyzeMenu(menu).get(from);
+        ContainerAnalyzer.ContainerInfo toInfo = ContainerAnalyzer.analyzeMenu(menu).get(to);
+
+        if (fromInfo != null && toInfo != null) {
+            List<Slot> fromSlots = fromInfo.getSlots();
+            List<Slot> toSlots = toInfo.getSlots().stream()
+                    .filter(slot -> slot.hasItem())
+                    .collect(Collectors.toList());
+
+            for (Slot toSlot : toSlots) {
+                if (!toSlot.mayPickup(player)) continue;
+                ItemStack toStack = toSlot.getItem();
+
+                for (Slot fromSlot : fromSlots) {
+                    if (!fromSlot.mayPickup(player)) continue;
+                    ItemStack fromStack = fromSlot.getItem();
+
+                    if (areItemStacksMergeable(fromStack, toStack) && fromStack.getCount() < fromStack.getMaxStackSize()) {
+                        int space = fromStack.getMaxStackSize() - fromStack.getCount();
+                        int amount = Math.min(space, toStack.getCount());
+
+                        if (amount > 0 && fromSlot.mayPlace(toStack)) {
+                            fromStack.grow(amount);
+                            toStack.shrink(amount);
+                            fromSlot.set(fromStack);
+                            toSlot.set(toStack.isEmpty() ? ItemStack.EMPTY : toStack);
+                        }
+                    }
+                }
+            }
+        } else {
+            autoStackInventories(from, to, SlotRange.fullRange(from), SlotRange.fullRange(to), player);
+        }
     }
 
     private static void autoStackInventories(
@@ -140,10 +249,12 @@ public class InventoryHelper {
             Container to,
             SlotRange fromRange,
             SlotRange toRange,
-            BiFunction<ItemStack, ItemStack, Boolean> predicate,
+            AbstractContainerMenu fromScreenHandler,
+            AbstractContainerMenu toScreenHandler,
             Player player
     ) {
-        transferEntireInventory(from, to, fromRange, toRange, predicate, null, null, player);
+        transferEntireInventory(from, to, fromRange, toRange, (fromStack, toStack) -> true,
+                fromScreenHandler, toScreenHandler, player);
     }
 
     private static void transferEntireInventory(
@@ -151,19 +262,10 @@ public class InventoryHelper {
             Container to,
             SlotRange fromRange,
             SlotRange toRange,
-            AbstractContainerMenu fromScreenHandler,
-            AbstractContainerMenu toScreenHandler,
+            BiFunction<ItemStack, ItemStack, Boolean> predicate,
             Player player
     ) {
-        transferEntireInventory(from,
-                to,
-                fromRange,
-                toRange,
-                (fromStack, toStack) -> true,
-                fromScreenHandler,
-                toScreenHandler,
-                player
-        );
+        transferEntireInventory(from, to, fromRange, toRange, predicate, null, null, player);
     }
 
     private static void transferEntireInventory(
@@ -247,11 +349,8 @@ public class InventoryHelper {
             return null;
         }
 
-        try {
-            return currentScreenHandler.getSlot(0).container;
-        } catch (IndexOutOfBoundsException e) {
-            return null;
-        }
+        ContainerAnalyzer.ContainerInfo info = ContainerAnalyzer.getContainerInventoryInfo(currentScreenHandler);
+        return info != null ? info.getContainer() : null;
     }
 
     public static boolean areItemStacksMergeable(ItemStack a, ItemStack b) {
