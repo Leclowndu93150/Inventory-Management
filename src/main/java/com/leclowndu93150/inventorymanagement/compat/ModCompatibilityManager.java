@@ -1,6 +1,5 @@
 package com.leclowndu93150.inventorymanagement.compat;
 
-import com.leclowndu93150.inventorymanagement.InventoryManagementMod;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -8,9 +7,14 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
+import net.neoforged.neoforge.items.wrapper.InvWrapper;
+import net.neoforged.neoforge.items.wrapper.SidedInvWrapper;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -21,6 +25,10 @@ public class ModCompatibilityManager {
     private final Map<String, ContainerOverride> containerOverrides = new HashMap<>();
     private final Set<String> knownStorageContainers = new HashSet<>();
     private final Set<String> blacklistedContainers = new HashSet<>();
+
+    // Cache detection results to avoid repeated analysis
+    private final Map<String, Boolean> detectionCache = new WeakHashMap<>();
+    private final Map<String, ContainerAnalysis> analysisCache = new WeakHashMap<>();
 
     private ModCompatibilityManager() {
         registerDefaultOverrides();
@@ -65,11 +73,9 @@ public class ModCompatibilityManager {
         blacklistPattern("aztech.modern_industrialization.*.gui.*Screen");
         blacklistPattern("com.enderio.machines.common.blocks.*Menu");
 
-        //Thief gets his whitelist snatched omg
+        // Others
         blacklistPattern("cy.jdkdigital.productivebees.container.gui.*");
         blacklistPattern("cy.jdkdigital.productivetrees.inventory.screen.*");
-
-        //Others
         blacklistPattern("com.stal111.forbidden_arcanus.client.gui.screen.*");
         blacklistPattern("tv.soaryn.xycraft.*");
         blacklistPattern("com.mrbysco.forcecraft.menu.*");
@@ -78,10 +84,9 @@ public class ModCompatibilityManager {
         blacklistPattern("se.mickelus.tetra.blocks.workbench.*");
 
         // Vanilla
-
         blacklistPattern("net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen*");
 
-        // Storage Drawers
+        // Storage Drawers - special case
         if (ModList.get().isLoaded("storagedrawers")) {
             blacklistPattern("com.jaquadro.minecraft.storagedrawers.*");
         }
@@ -91,6 +96,7 @@ public class ModCompatibilityManager {
             registerPattern("ironfurnaces.gui.furnaces.*", ContainerOverride.create(true, true, false));
         }
 
+        // Known good storage mods
         if (ModList.get().isLoaded("ironchest")) {
             knownStorageContainers.add("com.progwml6.ironchest");
         }
@@ -103,14 +109,14 @@ public class ModCompatibilityManager {
             knownStorageContainers.add("ninjaphenix.expandedstorage");
         }
 
-        //Create
+        // Create
         if (ModList.get().isLoaded("create")) {
             registerPattern("com.simibubi.create.content.logistics.depot.*", ContainerOverride.allowAll());
             registerPattern("com.simibubi.create.content.logistics.vault.*", ContainerOverride.allowAll());
             blacklistPattern("com.simibubi.create.content.contraptions.*");
         }
 
-        //Quark
+        // Quark
         if (ModList.get().isLoaded("quark")) {
             knownStorageContainers.add("vazkii.quark.content.management.module");
         }
@@ -133,29 +139,36 @@ public class ModCompatibilityManager {
 
         String containerClass = container.getClass().getName();
         String menuClass = menu.getClass().getName();
+        String cacheKey = containerClass + "|" + menuClass + "|" + (screenClass != null ? screenClass : "");
 
-        // Check blacklist first
+        Boolean cached = detectionCache.get(cacheKey);
+        if (cached != null) return cached;
+
         for (String pattern : blacklistedContainers) {
-            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern) || 
-                (screenClass != null && matchesPattern(screenClass, pattern))) {
+            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern) ||
+                    (screenClass != null && matchesPattern(screenClass, pattern))) {
+                detectionCache.put(cacheKey, false);
                 return false;
             }
         }
 
-        // Check known storage containers
         for (String known : knownStorageContainers) {
             if (containerClass.startsWith(known)) {
+                detectionCache.put(cacheKey, true);
                 return true;
             }
         }
 
-        // Check overrides
         ContainerOverride override = getOverride(containerClass, menuClass, screenClass);
         if (override != null) {
-            return override.allowSort();
+            boolean result = override.allowSort();
+            detectionCache.put(cacheKey, result);
+            return result;
         }
 
-        return analyzeContainer(container, menu);
+        boolean result = analyzeContainer(container, menu);
+        detectionCache.put(cacheKey, result);
+        return result;
     }
 
     public boolean canTransferItems(Container container, AbstractContainerMenu menu) {
@@ -168,7 +181,7 @@ public class ModCompatibilityManager {
 
         for (String pattern : blacklistedContainers) {
             if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern) ||
-                (screenClass != null && matchesPattern(screenClass, pattern))) {
+                    (screenClass != null && matchesPattern(screenClass, pattern))) {
                 return false;
             }
         }
@@ -189,10 +202,9 @@ public class ModCompatibilityManager {
         String containerClass = container.getClass().getName();
         String menuClass = menu.getClass().getName();
 
-        // Check blacklist
         for (String pattern : blacklistedContainers) {
             if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern) ||
-                (screenClass != null && matchesPattern(screenClass, pattern))) {
+                    (screenClass != null && matchesPattern(screenClass, pattern))) {
                 return false;
             }
         }
@@ -205,15 +217,11 @@ public class ModCompatibilityManager {
         return isStorageContainer(container, menu, screenClass);
     }
 
-    private ContainerOverride getOverride(String containerClass, String menuClass) {
-        return getOverride(containerClass, menuClass, null);
-    }
-
     private ContainerOverride getOverride(String containerClass, String menuClass, String screenClass) {
         for (Map.Entry<String, ContainerOverride> entry : containerOverrides.entrySet()) {
             String pattern = entry.getKey();
             if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern) ||
-                (screenClass != null && matchesPattern(screenClass, pattern))) {
+                    (screenClass != null && matchesPattern(screenClass, pattern))) {
                 return entry.getValue();
             }
         }
@@ -226,27 +234,135 @@ public class ModCompatibilityManager {
         return Pattern.matches(regex, className);
     }
 
-    private boolean analyzeContainer(Container container, AbstractContainerMenu menu) {
+    public ContainerAnalysis getAnalysis(Container container, AbstractContainerMenu menu) {
+        String key = container.getClass().getName() + "|" + menu.getClass().getName();
+        ContainerAnalysis cached = analysisCache.get(key);
+        if (cached != null) return cached;
+
+        ContainerAnalysis analysis = performAnalysis(container, menu);
+        analysisCache.put(key, analysis);
+        return analysis;
+    }
+
+    private ContainerAnalysis performAnalysis(Container container, AbstractContainerMenu menu) {
+        ContainerAnalysis analysis = new ContainerAnalysis();
+        analysis.containerClass = container.getClass().getName();
+        analysis.menuClass = menu.getClass().getName();
+
         List<Slot> containerSlots = menu.slots.stream()
                 .filter(slot -> slot.container == container)
                 .collect(Collectors.toList());
 
-        if (containerSlots.size() < 9) {
+        analysis.totalSlots = containerSlots.size();
+
+        // Check if it extends known good base classes
+        if (container instanceof SimpleContainer) {
+            analysis.isSimpleContainer = true;
+        }
+        if (container instanceof BaseContainerBlockEntity) {
+            analysis.isBlockEntity = true;
+        }
+
+        // Check for wrapped inventories
+        if (container instanceof InvWrapper) {
+            analysis.isWrappedInventory = true;
+            try {
+                Field invField = InvWrapper.class.getDeclaredField("inv");
+                invField.setAccessible(true);
+                Object wrapped = invField.get(container);
+                analysis.wrappedType = wrapped.getClass().getName();
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
+        if (container instanceof SidedInvWrapper) {
+            analysis.isSidedWrapper = true;
+        }
+
+        analysis.hasItemHandlerSlots = containerSlots.stream()
+                .anyMatch(slot -> slot instanceof SlotItemHandler);
+
+        analysis.slotTypes = containerSlots.stream()
+                .map(slot -> slot.getClass().getName())
+                .distinct()
+                .collect(Collectors.toList());
+        analysis.isHomogeneous = analysis.slotTypes.size() == 1;
+
+        ItemStack[] testItems = {
+                new ItemStack(Items.COBBLESTONE),
+                new ItemStack(Items.DIRT),
+                new ItemStack(Items.OAK_LOG),
+                new ItemStack(Items.IRON_INGOT),
+                new ItemStack(Items.APPLE),
+                new ItemStack(Items.DIAMOND_PICKAXE)
+        };
+
+        for (ItemStack testItem : testItems) {
+            long acceptingSlots = containerSlots.stream()
+                    .filter(slot -> slot.mayPlace(testItem))
+                    .count();
+            analysis.itemAcceptance.put(testItem.getItem().toString(),
+                    (double) acceptingSlots / containerSlots.size());
+        }
+
+        // Calculate acceptance rate
+        analysis.averageAcceptanceRate = analysis.itemAcceptance.values().stream()
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0);
+
+        try {
+            // Try to detect if container implements or wraps IItemHandler
+            if (hasItemHandlerCapability(container)) {
+                analysis.hasItemHandlerCapability = true;
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+
+        return analysis;
+    }
+
+    private boolean hasItemHandlerCapability(Container container) {
+        Class<?> clazz = container.getClass();
+
+        for (Class<?> iface : clazz.getInterfaces()) {
+            if (IItemHandler.class.isAssignableFrom(iface)) {
+                return true;
+            }
+        }
+
+        for (Field field : clazz.getDeclaredFields()) {
+            if (IItemHandler.class.isAssignableFrom(field.getType())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean analyzeContainer(Container container, AbstractContainerMenu menu) {
+        ContainerAnalysis analysis = getAnalysis(container, menu);
+
+        if (analysis.totalSlots < 9) {
             return false;
         }
 
-
-        if (!(container instanceof SimpleContainer)) {
-            return false;
+        if (analysis.isBlockEntity || analysis.isWrappedInventory) {
+            return true;
         }
 
-        ItemStack testStack = new ItemStack(Items.DIRT);
-        long acceptingSlots = containerSlots.stream()
-                .filter(slot -> slot.mayPlace(testStack))
-                .count();
+        // Accept if has IItemHandler capability
+        if (analysis.hasItemHandlerCapability || analysis.hasItemHandlerSlots) {
+            return analysis.averageAcceptanceRate >= 0.5;
+        }
 
-        // If at least 75% of slots accept common items, it's probably storage
-        return acceptingSlots >= containerSlots.size() * 0.75;
+        // For SimpleContainer, check acceptance rate
+        if (analysis.isSimpleContainer) {
+            return analysis.averageAcceptanceRate >= 0.75;
+        }
+
+        return analysis.isHomogeneous && analysis.averageAcceptanceRate >= 0.6;
     }
 
     public static class ContainerOverride {
@@ -275,5 +391,22 @@ public class ModCompatibilityManager {
         public boolean allowSort() { return allowSort; }
         public boolean allowTransfer() { return allowTransfer; }
         public boolean allowStack() { return allowStack; }
+    }
+
+    public static class ContainerAnalysis {
+        public String containerClass = "";
+        public String menuClass = "";
+        public int totalSlots = 0;
+        public boolean isSimpleContainer = false;
+        public boolean isBlockEntity = false;
+        public boolean isWrappedInventory = false;
+        public boolean isSidedWrapper = false;
+        public String wrappedType = "";
+        public boolean hasItemHandlerSlots = false;
+        public boolean hasItemHandlerCapability = false;
+        public boolean isHomogeneous = false;
+        public List<String> slotTypes = new ArrayList<>();
+        public Map<String, Double> itemAcceptance = new LinkedHashMap<>();
+        public double averageAcceptanceRate = 0.0;
     }
 }
