@@ -118,21 +118,27 @@ public class InventoryManagementClientMod {
                 event.setCanceled(true);
             } else if (SORT_PLAYER.get().matches(event.getKeyCode(), event.getScanCode())) {
                 ClientNetworking.sendSort(true);
+                playClickSound();
                 event.setCanceled(true);
             } else if (SORT_CONTAINER.get().matches(event.getKeyCode(), event.getScanCode())) {
                 ClientNetworking.sendSort(false);
+                playClickSound();
                 event.setCanceled(true);
             } else if (TRANSFER_TO_CONTAINER.get().matches(event.getKeyCode(), event.getScanCode())) {
                 ClientNetworking.sendTransfer(false);
+                playClickSound();
                 event.setCanceled(true);
             } else if (TRANSFER_FROM_CONTAINER.get().matches(event.getKeyCode(), event.getScanCode())) {
                 ClientNetworking.sendTransfer(true);
+                playClickSound();
                 event.setCanceled(true);
             } else if (STACK_TO_PLAYER.get().matches(event.getKeyCode(), event.getScanCode())) {
                 ClientNetworking.sendStack(true);
+                playClickSound();
                 event.setCanceled(true);
             } else if (STACK_TO_CONTAINER.get().matches(event.getKeyCode(), event.getScanCode())) {
                 ClientNetworking.sendStack(false);
+                playClickSound();
                 event.setCanceled(true);
             }
         }
@@ -154,13 +160,17 @@ public class InventoryManagementClientMod {
                 return;
             }
 
-            Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.player != null) {
-                minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.25F, 1.0F);
-            }
+            playClickSound();
 
             ClientNetworking.sendSort(isPlayerInventory);
             event.setCanceled(true);
+        }
+    }
+
+    public static void playClickSound(){
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player != null) {
+            minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.25F, 1.0F);
         }
     }
 
