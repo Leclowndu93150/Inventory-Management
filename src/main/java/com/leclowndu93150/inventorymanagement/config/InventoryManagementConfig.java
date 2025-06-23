@@ -4,7 +4,14 @@ import com.leclowndu93150.inventorymanagement.compat.ModCompatibilityManager;
 import net.minecraft.client.gui.screens.Screen;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+import net.neoforged.fml.loading.FMLPaths;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 public class InventoryManagementConfig {
@@ -34,8 +41,10 @@ public class InventoryManagementConfig {
     public final ModConfigSpec.IntValue minSlotsForDetection;
     public final ModConfigSpec.DoubleValue slotAcceptanceThreshold;
 
-    // Per-screen positions stored in memory (not in config file for simplicity)
+    // Per-screen positions stored in memory and persisted to JSON
     private final Map<String, Position> screenPositions = new HashMap<>();
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Path SCREEN_CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("inventorymanagement-per-screen.json");
 
     InventoryManagementConfig(ModConfigSpec.Builder builder) {
         builder.comment("Inventory Management Configuration").push("general");
@@ -204,6 +213,7 @@ public class InventoryManagementConfig {
         } else {
             screenPositions.put(key, position);
         }
+        saveScreenPositions();
     }
 
     public void loadCompatibilityOverrides() {
@@ -240,6 +250,31 @@ public class InventoryManagementConfig {
 
     public void save() {
         SPEC.save();
+        saveScreenPositions();
+    }
+
+    public void loadScreenPositions() {
+        if (Files.exists(SCREEN_CONFIG_PATH)) {
+            try {
+                String json = Files.readString(SCREEN_CONFIG_PATH);
+                Map<String, Position> loaded = GSON.fromJson(json, new TypeToken<Map<String, Position>>(){}.getType());
+                if (loaded != null) {
+                    screenPositions.clear();
+                    screenPositions.putAll(loaded);
+                }
+            } catch (IOException e) {
+                // Log error or handle as needed
+            }
+        }
+    }
+
+    private void saveScreenPositions() {
+        try {
+            String json = GSON.toJson(screenPositions);
+            Files.writeString(SCREEN_CONFIG_PATH, json);
+        } catch (IOException e) {
+            // Log error or handle as needed
+        }
     }
 
     public static class Position {

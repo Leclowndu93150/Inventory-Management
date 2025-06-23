@@ -65,6 +65,7 @@ public final class InventoryManagementMod {
 
     private void onConfigLoaded(ModConfigEvent.Loading event) {
         InventoryManagementConfig.getInstance().loadCompatibilityOverrides();
+        InventoryManagementConfig.getInstance().loadScreenPositions();
     }
 
     private void onConfigReloaded(ModConfigEvent.Reloading event) {
