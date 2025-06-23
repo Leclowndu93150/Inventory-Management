@@ -24,6 +24,8 @@ public class InventoryManagementConfig {
     public final ModConfigSpec.BooleanValue showStack;
     public final ModConfigSpec.IntValue defaultOffsetX;
     public final ModConfigSpec.IntValue defaultOffsetY;
+    public final ModConfigSpec.EnumValue<SortingMode> sortingMode;
+    public final ModConfigSpec.BooleanValue autoRefillEnabled;
 
     // Mod compatibility config
     public final ModConfigSpec.ConfigValue<List<? extends String>> compatOverrides;
@@ -63,6 +65,18 @@ public class InventoryManagementConfig {
         defaultOffsetY = builder
                 .comment("Default Y offset for button position")
                 .defineInRange("defaultOffsetY", -1, -100, 100);
+
+        builder.pop();
+
+        builder.push("sorting");
+
+        sortingMode = builder
+                .comment("Sorting mode for inventory sorting")
+                .defineEnum("sortingMode", SortingMode.ALPHABETICAL);
+
+        autoRefillEnabled = builder
+                .comment("Enable automatic stack refilling when items are used up")
+                .define("autoRefillEnabled", true);
 
         builder.pop();
         builder.pop();
@@ -222,6 +236,10 @@ public class InventoryManagementConfig {
 
     private static String getScreenKey(Screen screen, boolean isPlayerInventory) {
         return screen.getClass().getName().replace(".", "-") + (isPlayerInventory ? "-player" : "-container");
+    }
+
+    public void save() {
+        SPEC.save();
     }
 
     public static class Position {

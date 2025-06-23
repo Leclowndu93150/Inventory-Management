@@ -1,5 +1,7 @@
 package com.leclowndu93150.inventorymanagement.inventory.sorting;
 
+import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
+import com.leclowndu93150.inventorymanagement.config.SortingMode;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -100,7 +102,7 @@ public class ItemStackComparator implements Comparator<ItemStack> {
 
     private final SerialComparator<ItemStack> underlyingComparator;
 
-    private ItemStackComparator(SerialComparator<ItemStack> underlyingComparator) {
+    ItemStackComparator(SerialComparator<ItemStack> underlyingComparator) {
         this.underlyingComparator = underlyingComparator;
     }
 
@@ -255,5 +257,13 @@ public class ItemStackComparator implements Comparator<ItemStack> {
 
     public static ItemStackComparator comparator() {
         return new ItemStackComparator(SerialComparator.comparing(SUB_COMPARATORS));
+    }
+    
+    public static Comparator<ItemStack> comparator(SortingMode mode, List<ItemStack> allStacks) {
+        return switch (mode) {
+            case ALPHABETICAL -> comparator();
+            case AMOUNT -> new AmountComparator(allStacks);
+            case MOD_ID -> new ModIdComparator();
+        };
     }
 }

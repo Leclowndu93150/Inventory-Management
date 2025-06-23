@@ -3,6 +3,7 @@ package com.leclowndu93150.inventorymanagement;
 import com.leclowndu93150.inventorymanagement.api.InventoryManagementAPI;
 import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
 import com.leclowndu93150.inventorymanagement.debug.DebugCommand;
+import com.leclowndu93150.inventorymanagement.events.AutoRefillEvents;
 import com.leclowndu93150.inventorymanagement.network.Networking;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -27,6 +28,7 @@ public final class InventoryManagementMod {
         modEventBus.addListener(this::onConfigReloaded);
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         Networking.register(modEventBus);
+        AutoRefillEvents.register();
     }
 
     private void onInterModProcess(InterModProcessEvent event) {

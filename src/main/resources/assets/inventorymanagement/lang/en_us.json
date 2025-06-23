@@ -16,7 +16,17 @@
   "inventorymanagement.button.autostack_into": "Auto Stack to Player",
   "inventorymanagement.button.autostack_from": "Auto Stack to Container",
   "inventorymanagement.button.reset": "Reset",
+  "inventorymanagement.button.settings": "Settings",
 
   "inventorymanagement.position_edit.title": "Edit Button Position",
-  "inventorymanagement.default_position_edit.title": "Edit Default Button Position"
+  "inventorymanagement.default_position_edit.title": "Edit Default Button Position",
+  
+  "inventorymanagement.settings.title": "Inventory Management Settings",
+  "inventorymanagement.settings.sort_mode": "Sorting Mode",
+  "inventorymanagement.settings.auto_refill": "Auto Stack Refill",
+  "inventorymanagement.sorting.alphabetical": "A-Z (Alphabetical)",
+  "inventorymanagement.sorting.amount": "Amount (Stack Size)",
+  "inventorymanagement.sorting.mod_id": "Mod ID",
+  
+  "inventorymanagement.keybind.sort.hovered": "Sort Hovered Container"
 }

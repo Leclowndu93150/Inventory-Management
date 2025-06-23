@@ -1,6 +1,8 @@
 package com.leclowndu93150.inventorymanagement.inventory;
 
 import com.leclowndu93150.inventorymanagement.compat.ContainerAnalyzer;
+import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
+import com.leclowndu93150.inventorymanagement.config.SortingMode;
 import com.leclowndu93150.inventorymanagement.inventory.sorting.ItemStackComparator;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
@@ -85,10 +87,13 @@ public class InventoryHelper {
             }
         }
 
-        // Sort and filter empty stacks
-        return cleanedStacks.stream()
+        SortingMode sortingMode = InventoryManagementConfig.getInstance().sortingMode.get();
+        List<ItemStack> nonEmptyStacks = cleanedStacks.stream()
                 .filter(itemStack -> !itemStack.isEmpty())
-                .sorted(ItemStackComparator.comparator())
+                .collect(Collectors.toList());
+        
+        return nonEmptyStacks.stream()
+                .sorted(ItemStackComparator.comparator(sortingMode, nonEmptyStacks))
                 .collect(Collectors.toList());
     }
 

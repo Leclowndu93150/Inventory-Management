@@ -2,6 +2,7 @@ package com.leclowndu93150.inventorymanagement.client;
 
 import com.leclowndu93150.inventorymanagement.client.gui.AutoStackButton;
 import com.leclowndu93150.inventorymanagement.client.gui.InventoryManagementButton;
+import com.leclowndu93150.inventorymanagement.client.gui.SettingsButton;
 import com.leclowndu93150.inventorymanagement.client.gui.SortInventoryButton;
 import com.leclowndu93150.inventorymanagement.client.gui.TransferAllButton;
 import com.leclowndu93150.inventorymanagement.compat.ModCompatibilityManager;
@@ -82,6 +83,7 @@ public class InventoryButtonsManager {
         this.generateTransferAllButton(screen, false, addButton);
 
         this.generateSortButton(screen, true, addButton);
+        this.generateSettingsButton(screen, addButton);
         this.generateAutoStackButton(screen, true, addButton);
         this.generateTransferAllButton(screen, true, addButton);
     }
@@ -226,6 +228,31 @@ public class InventoryButtonsManager {
         AutoStackButton button = new AutoStackButton(screen, fromInventory, referenceSlot, position, isPlayerInventory);
         addButton.accept(button);
         this.addButton(button, isPlayerInventory);
+    }
+
+    private void generateSettingsButton(AbstractContainerScreen<?> screen, Consumer<GuiEventListener> addButton) {
+        if (!InventoryManagementConfig.getInstance().modEnabled.get()) {
+            return;
+        }
+
+        if (!(screen instanceof InventoryScreen)) {
+            return;
+        }
+
+        Slot referenceSlot = this.getReferenceSlot(screen, true);
+        if (referenceSlot == null) {
+            return;
+        }
+
+        LocalPlayer player = MINECRAFT.player;
+        if (player == null) {
+            return;
+        }
+
+        InventoryManagementConfig.Position position = this.getButtonPosition(screen, true);
+        SettingsButton button = new SettingsButton(screen, player.getInventory(), referenceSlot, position);
+        addButton.accept(button);
+        this.addButton(button, true);
     }
 
     private void generateTransferAllButton(AbstractContainerScreen<?> screen, boolean isPlayerInventory, Consumer<GuiEventListener> addButton) {
