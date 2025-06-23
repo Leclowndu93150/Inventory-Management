@@ -149,7 +149,8 @@ public class InventoryHelper {
         ContainerAnalyzer.ContainerInfo containerInfo = ContainerAnalyzer.getContainerInventoryInfo(menu);
 
         if (playerInfo == null || containerInfo == null) {
-            SlotRange playerSlotRange = SlotRange.playerMainRange();
+            SlotRange playerSlotRange = InventoryManagementConfig.getInstance().ignoreHotbarInTransfer.get() 
+                    ? SlotRange.playerMainRange() : SlotRange.playerFullRange();
             SlotRange containerSlotRange = SlotRange.fullRange(containerInventory);
 
             if (player.containerMenu instanceof HorseInventoryMenu) {
@@ -165,7 +166,13 @@ public class InventoryHelper {
             }
         } else {
             if (fromPlayerInventory) {
-                transferUsingSlots(playerInfo.getSlots(), containerInfo.getSlots(), player);
+                List<Slot> playerSlots = playerInfo.getSlots();
+                if (InventoryManagementConfig.getInstance().ignoreHotbarInTransfer.get()) {
+                    playerSlots = playerSlots.stream()
+                            .filter(slot -> slot.getSlotIndex() >= 9) // Only main inventory, not hotbar
+                            .collect(Collectors.toList());
+                }
+                transferUsingSlots(playerSlots, containerInfo.getSlots(), player);
             } else {
                 transferUsingSlots(containerInfo.getSlots(), playerInfo.getSlots(), player);
             }
@@ -376,7 +383,11 @@ public class InventoryHelper {
         }
 
         public static SlotRange playerMainRange() {
-            return new SlotRange(Inventory.getSelectionSize(), Inventory.INVENTORY_SIZE);
+            return new SlotRange(9, 36); // Exclude hotbar (0-8), include main inventory (9-35)
+        }
+        
+        public static SlotRange playerFullRange() {
+            return new SlotRange(0, 36); // Include hotbar (0-8) and main inventory (9-35)
         }
 
         public static SlotRange horseMainRange(Container inventory) {

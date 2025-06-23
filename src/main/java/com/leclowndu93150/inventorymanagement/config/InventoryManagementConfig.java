@@ -33,6 +33,7 @@ public class InventoryManagementConfig {
     public final ModConfigSpec.IntValue defaultOffsetY;
     public final ModConfigSpec.EnumValue<SortingMode> sortingMode;
     public final ModConfigSpec.BooleanValue autoRefillEnabled;
+    public final ModConfigSpec.BooleanValue ignoreHotbarInTransfer;
 
     // Mod compatibility config
     public final ModConfigSpec.ConfigValue<List<? extends String>> compatOverrides;
@@ -86,6 +87,10 @@ public class InventoryManagementConfig {
         autoRefillEnabled = builder
                 .comment("Enable automatic stack refilling when items are used up")
                 .define("autoRefillEnabled", true);
+
+        ignoreHotbarInTransfer = builder
+                .comment("Ignore hotbar items when using Transfer All to Container")
+                .define("ignoreHotbarInTransfer", true);
 
         builder.pop();
         builder.pop();

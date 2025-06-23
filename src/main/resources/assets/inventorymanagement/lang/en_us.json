@@ -29,6 +29,7 @@
   "inventorymanagement.settings.show_transfer": "Show Transfer Buttons",
   "inventorymanagement.settings.show_stack": "Show Auto Stack Buttons",
   "inventorymanagement.settings.dynamic_detection": "Dynamic Container Detection",
+  "inventorymanagement.settings.ignore_hotbar_transfer": "Ignore Hotbar in Transfer All",
   "inventorymanagement.settings.min_slots": "Min Slots for Detection",
   "inventorymanagement.settings.min_slots.tooltip": "Minimum number of slots required for a container to be considered storage (1-54)",
   "inventorymanagement.settings.threshold": "Slot Acceptance Threshold",

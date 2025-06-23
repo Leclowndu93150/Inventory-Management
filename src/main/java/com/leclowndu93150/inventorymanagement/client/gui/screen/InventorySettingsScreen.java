@@ -24,6 +24,7 @@ public class InventorySettingsScreen extends Screen {
     private boolean showTransfer;
     private boolean showStack;
     private boolean enableDynamicDetection;
+    private boolean ignoreHotbarInTransfer;
     private EditBox minSlotsField;
     private EditBox thresholdField;
     private SettingsList settingsList;
@@ -41,6 +42,7 @@ public class InventorySettingsScreen extends Screen {
         this.showTransfer = config.showTransfer.get();
         this.showStack = config.showStack.get();
         this.enableDynamicDetection = config.enableDynamicDetection.get();
+        this.ignoreHotbarInTransfer = config.ignoreHotbarInTransfer.get();
     }
 
     @Override
@@ -87,6 +89,12 @@ public class InventorySettingsScreen extends Screen {
                 Component.translatable("inventorymanagement.settings.dynamic_detection"),
                 this.enableDynamicDetection,
                 value -> this.enableDynamicDetection = value));
+
+        // Ignore hotbar in transfer toggle
+        this.settingsList.addEntry(new SettingsList.BooleanEntry(
+                Component.translatable("inventorymanagement.settings.ignore_hotbar_transfer"),
+                this.ignoreHotbarInTransfer,
+                value -> this.ignoreHotbarInTransfer = value));
 
         // Min slots for detection
         InventoryManagementConfig config = InventoryManagementConfig.getInstance();
@@ -167,6 +175,7 @@ public class InventorySettingsScreen extends Screen {
         config.showTransfer.set(this.showTransfer);
         config.showStack.set(this.showStack);
         config.enableDynamicDetection.set(this.enableDynamicDetection);
+        config.ignoreHotbarInTransfer.set(this.ignoreHotbarInTransfer);
         
         // Parse and save numeric fields
         try {
