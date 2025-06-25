@@ -1,5 +1,6 @@
 package com.leclowndu93150.inventorymanagement.config;
 
+import com.leclowndu93150.inventorymanagement.client.ClientBlockTracker;
 import com.leclowndu93150.inventorymanagement.compat.ModCompatibilityManager;
 import net.minecraft.client.gui.screens.Screen;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -44,8 +45,11 @@ public class InventoryManagementConfig {
 
     // Per-screen positions stored in memory and persisted to JSON
     private final Map<String, Position> screenPositions = new HashMap<>();
+    // Per-block positions stored in memory and persisted to JSON
+    private final Map<String, Position> blockPositions = new HashMap<>();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final Path SCREEN_CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("inventorymanagement-per-screen.json");
+    private static final Path SCREEN_CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("inventorymanagement").resolve("per-screen.json");
+    private static final Path BLOCK_CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("inventorymanagement").resolve("per-block.json");
 
     InventoryManagementConfig(ModConfigSpec.Builder builder) {
         builder.comment("Inventory Management Configuration").push("general");
@@ -206,9 +210,25 @@ public class InventoryManagementConfig {
         return new Position(defaultOffsetX.get(), defaultOffsetY.get());
     }
 
+    public Optional<Position> getButtonPosition(Screen screen, boolean isPlayerInventory) {
+        String blockId = ClientBlockTracker.getInstance().getBlockIdForScreen(screen);
+        if (blockId != null) {
+            Optional<Position> blockPos = getBlockPosition(blockId, isPlayerInventory);
+            if (blockPos.isPresent()) {
+                return blockPos;
+            }
+        }
+        return getScreenPosition(screen, isPlayerInventory);
+    }
+
     public Optional<Position> getScreenPosition(Screen screen, boolean isPlayerInventory) {
         String key = getScreenKey(screen, isPlayerInventory);
         return Optional.ofNullable(screenPositions.get(key));
+    }
+
+    public Optional<Position> getBlockPosition(String blockId, boolean isPlayerInventory) {
+        String key = getBlockKey(blockId, isPlayerInventory);
+        return Optional.ofNullable(blockPositions.get(key));
     }
 
     public void setScreenPosition(Screen screen, boolean isPlayerInventory, Position position) {
@@ -219,6 +239,16 @@ public class InventoryManagementConfig {
             screenPositions.put(key, position);
         }
         saveScreenPositions();
+    }
+
+    public void setBlockPosition(String blockId, boolean isPlayerInventory, Position position) {
+        String key = getBlockKey(blockId, isPlayerInventory);
+        if (position.equals(getDefaultPosition())) {
+            blockPositions.remove(key);
+        } else {
+            blockPositions.put(key, position);
+        }
+        saveBlockPositions();
     }
 
     public void loadCompatibilityOverrides() {
@@ -253,9 +283,14 @@ public class InventoryManagementConfig {
         return screen.getClass().getName().replace(".", "-") + (isPlayerInventory ? "-player" : "-container");
     }
 
+    private static String getBlockKey(String blockId, boolean isPlayerInventory) {
+        return blockId + (isPlayerInventory ? "-player" : "-container");
+    }
+
     public void save() {
         SPEC.save();
         saveScreenPositions();
+        saveBlockPositions();
     }
 
     public void loadScreenPositions() {
@@ -271,12 +306,39 @@ public class InventoryManagementConfig {
                 // Log error or handle as needed
             }
         }
+        loadBlockPositions();
+    }
+
+    public void loadBlockPositions() {
+        if (Files.exists(BLOCK_CONFIG_PATH)) {
+            try {
+                String json = Files.readString(BLOCK_CONFIG_PATH);
+                Map<String, Position> loaded = GSON.fromJson(json, new TypeToken<Map<String, Position>>(){}.getType());
+                if (loaded != null) {
+                    blockPositions.clear();
+                    blockPositions.putAll(loaded);
+                }
+            } catch (IOException e) {
+                // Log error or handle as needed
+            }
+        }
     }
 
     private void saveScreenPositions() {
         try {
+            Files.createDirectories(SCREEN_CONFIG_PATH.getParent());
             String json = GSON.toJson(screenPositions);
             Files.writeString(SCREEN_CONFIG_PATH, json);
+        } catch (IOException e) {
+            // Log error or handle as needed
+        }
+    }
+
+    private void saveBlockPositions() {
+        try {
+            Files.createDirectories(BLOCK_CONFIG_PATH.getParent());
+            String json = GSON.toJson(blockPositions);
+            Files.writeString(BLOCK_CONFIG_PATH, json);
         } catch (IOException e) {
             // Log error or handle as needed
         }

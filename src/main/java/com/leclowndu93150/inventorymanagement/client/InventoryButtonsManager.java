@@ -364,7 +364,7 @@ public class InventoryButtonsManager {
 
     private InventoryManagementConfig.Position getButtonPosition(AbstractContainerScreen<?> screen, boolean isPlayerInventory) {
         InventoryManagementConfig.Position offset = InventoryManagementConfig.getInstance()
-                .getScreenPosition(screen, isPlayerInventory)
+                .getButtonPosition(screen, isPlayerInventory)
                 .orElse(InventoryManagementConfig.getInstance().getDefaultPosition());
         return this.getButtonPosition((isPlayerInventory ? this.playerButtons : this.containerButtons).size(), offset);
     }

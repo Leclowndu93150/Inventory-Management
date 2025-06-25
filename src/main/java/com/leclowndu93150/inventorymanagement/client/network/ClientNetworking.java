@@ -17,4 +17,5 @@ public final class ClientNetworking {
     public static void sendTransfer(boolean fromPlayerInventory) {
         PacketDistributor.sendToServer(new Networking.TransferC2S(fromPlayerInventory));
     }
+
 }

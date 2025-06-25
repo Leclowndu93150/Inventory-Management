@@ -40,6 +40,7 @@ public final class Networking {
                 (payload, context) -> context.enqueueWork(() ->
                         ServerNetworking.handleTransfer(payload, context))
         );
+
     }
 
     public record StackC2S(boolean fromPlayerInventory) implements CustomPacketPayload {

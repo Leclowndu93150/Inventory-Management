@@ -1,6 +1,7 @@
 package com.leclowndu93150.inventorymanagement.client.gui.screen;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.leclowndu93150.inventorymanagement.client.ClientBlockTracker;
 import com.leclowndu93150.inventorymanagement.client.InventoryButtonsManager;
 import com.leclowndu93150.inventorymanagement.client.gui.InventoryManagementButton;
 import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
@@ -22,6 +23,8 @@ public class PerScreenPositionEditScreen extends Screen {
     private final Screen parent;
     private final boolean isPlayerInventory;
     private final LinkedList<InventoryManagementButton> buttons = new LinkedList<>();
+    private final String blockId;
+    private final boolean hasBlockId;
 
     private InventoryManagementConfig.Position currentPosition;
     private int dragStartX;
@@ -32,10 +35,18 @@ public class PerScreenPositionEditScreen extends Screen {
         super(Component.translatable("inventorymanagement.position_edit.title"));
         this.parent = parent;
         this.isPlayerInventory = isPlayerInventory;
+        this.blockId = ClientBlockTracker.getInstance().getBlockIdForScreen(parent);
+        this.hasBlockId = blockId != null;
 
-        this.currentPosition = InventoryManagementConfig.getInstance()
-                .getScreenPosition(parent, isPlayerInventory)
-                .orElse(InventoryManagementConfig.getInstance().getDefaultPosition());
+        if (hasBlockId) {
+            this.currentPosition = InventoryManagementConfig.getInstance()
+                    .getBlockPosition(blockId, isPlayerInventory)
+                    .orElse(InventoryManagementConfig.getInstance().getDefaultPosition());
+        } else {
+            this.currentPosition = InventoryManagementConfig.getInstance()
+                    .getScreenPosition(parent, isPlayerInventory)
+                    .orElse(InventoryManagementConfig.getInstance().getDefaultPosition());
+        }
     }
 
     @Override
@@ -52,12 +63,19 @@ public class PerScreenPositionEditScreen extends Screen {
         int buttonX = (this.width - totalWidth) / 2;
 
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> {
-            InventoryManagementConfig.getInstance().setScreenPosition(parent, isPlayerInventory, currentPosition);
-            if (parent instanceof AbstractContainerScreen<?> containerScreen) {
-                parent.clearWidgets();
-                parent.init(minecraft, width, height);
+            if (hasBlockId) {
+                InventoryManagementConfig.getInstance().setBlockPosition(blockId, isPlayerInventory, currentPosition);
+            } else {
+                InventoryManagementConfig.getInstance().setScreenPosition(parent, isPlayerInventory, currentPosition);
             }
             this.minecraft.setScreen(parent);
+            // Refresh the parent screen after returning to it
+            if (parent instanceof AbstractContainerScreen<?> containerScreen) {
+                minecraft.execute(() -> {
+                    parent.clearWidgets();
+                    parent.init(minecraft, parent.width, parent.height);
+                });
+            }
         }).bounds(buttonX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT).build());
 
         buttonX += BUTTON_WIDTH + BUTTON_SPACING;
@@ -79,6 +97,7 @@ public class PerScreenPositionEditScreen extends Screen {
 
         this.refreshButtonPositions();
     }
+    
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
@@ -98,6 +117,14 @@ public class PerScreenPositionEditScreen extends Screen {
                 4,
                 4,
                 0xFFFFFF);
+
+        if (hasBlockId) {
+            guiGraphics.drawString(this.font,
+                    "Block: " + this.blockId,
+                    4,
+                    16,
+                    0x00FF00);
+        }
 
         guiGraphics.drawCenteredString(this.font,
                 this.title,
