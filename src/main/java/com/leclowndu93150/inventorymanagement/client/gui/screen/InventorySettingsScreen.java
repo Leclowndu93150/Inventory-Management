@@ -52,7 +52,7 @@ public class InventorySettingsScreen extends Screen {
         int centerX = this.width / 2;
         
         // Create scrollable list
-        this.settingsList = new SettingsList(this.minecraft, this.width, this.height - 100, 40, 25);
+        this.settingsList = new SettingsList(this.minecraft, this.width, this.height, 40, this.height - 100, 25);
         this.addWidget(this.settingsList);
 
         // Button visibility toggles
@@ -196,15 +196,15 @@ public class InventorySettingsScreen extends Screen {
     }
     
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        return this.settingsList.mouseScrolled(mouseX, mouseY, scrollX, scrollY) || super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        return this.settingsList.mouseScrolled(mouseX, mouseY, delta) || super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     private static class SettingsList extends ContainerObjectSelectionList<SettingsList.Entry> {
         private static final int ENTRY_HEIGHT = 25;
         
-        public SettingsList(Minecraft minecraft, int width, int height, int y0, int itemHeight) {
-            super(minecraft, width, height, y0, itemHeight);
+        public SettingsList(Minecraft minecraft, int width, int height, int y0, int y1, int itemHeight) {
+            super(minecraft, width, height, y0, y1, itemHeight);
         }
         
         @Override

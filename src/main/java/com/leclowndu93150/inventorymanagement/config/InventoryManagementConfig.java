@@ -3,12 +3,12 @@ package com.leclowndu93150.inventorymanagement.config;
 import com.leclowndu93150.inventorymanagement.client.ClientBlockTracker;
 import com.leclowndu93150.inventorymanagement.compat.ModCompatibilityManager;
 import net.minecraft.client.gui.screens.Screen;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.loading.FMLPaths;
 import org.apache.commons.lang3.tuple.Pair;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,31 +17,31 @@ import java.util.*;
 
 public class InventoryManagementConfig {
     public static final InventoryManagementConfig INSTANCE;
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec SPEC;
 
     static {
-        Pair<InventoryManagementConfig, ModConfigSpec> pair = new ModConfigSpec.Builder()
+        Pair<InventoryManagementConfig, ForgeConfigSpec> pair = new ForgeConfigSpec.Builder()
                 .configure(InventoryManagementConfig::new);
         INSTANCE = pair.getLeft();
         SPEC = pair.getRight();
     }
 
-    public final ModConfigSpec.BooleanValue modEnabled;
-    public final ModConfigSpec.BooleanValue showSort;
-    public final ModConfigSpec.BooleanValue showTransfer;
-    public final ModConfigSpec.BooleanValue showStack;
-    public final ModConfigSpec.IntValue defaultOffsetX;
-    public final ModConfigSpec.IntValue defaultOffsetY;
-    public final ModConfigSpec.EnumValue<SortingMode> sortingMode;
-    public final ModConfigSpec.BooleanValue autoRefillEnabled;
-    public final ModConfigSpec.BooleanValue ignoreHotbarInTransfer;
+    public final ForgeConfigSpec.BooleanValue modEnabled;
+    public final ForgeConfigSpec.BooleanValue showSort;
+    public final ForgeConfigSpec.BooleanValue showTransfer;
+    public final ForgeConfigSpec.BooleanValue showStack;
+    public final ForgeConfigSpec.IntValue defaultOffsetX;
+    public final ForgeConfigSpec.IntValue defaultOffsetY;
+    public final ForgeConfigSpec.EnumValue<SortingMode> sortingMode;
+    public final ForgeConfigSpec.BooleanValue autoRefillEnabled;
+    public final ForgeConfigSpec.BooleanValue ignoreHotbarInTransfer;
 
     // Mod compatibility config
-    public final ModConfigSpec.ConfigValue<List<? extends String>> compatOverrides;
-    public final ModConfigSpec.ConfigValue<List<? extends String>> blacklistedContainers;
-    public final ModConfigSpec.BooleanValue enableDynamicDetection;
-    public final ModConfigSpec.IntValue minSlotsForDetection;
-    public final ModConfigSpec.DoubleValue slotAcceptanceThreshold;
+    public final ForgeConfigSpec.ConfigValue<List<? extends String>> compatOverrides;
+    public final ForgeConfigSpec.ConfigValue<List<? extends String>> blacklistedContainers;
+    public final ForgeConfigSpec.BooleanValue enableDynamicDetection;
+    public final ForgeConfigSpec.IntValue minSlotsForDetection;
+    public final ForgeConfigSpec.DoubleValue slotAcceptanceThreshold;
 
     // Per-screen positions stored in memory and persisted to JSON
     private final Map<String, Position> screenPositions = new HashMap<>();
@@ -51,7 +51,7 @@ public class InventoryManagementConfig {
     private static final Path SCREEN_CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("inventorymanagement").resolve("per-screen.json");
     private static final Path BLOCK_CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("inventorymanagement").resolve("per-block.json");
 
-    InventoryManagementConfig(ModConfigSpec.Builder builder) {
+    InventoryManagementConfig(ForgeConfigSpec.Builder builder) {
         builder.comment("Inventory Management Configuration").push("general");
 
         modEnabled = builder

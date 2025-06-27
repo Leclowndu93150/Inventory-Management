@@ -2,83 +2,121 @@ package com.leclowndu93150.inventorymanagement.network;
 
 import com.leclowndu93150.inventorymanagement.InventoryManagementMod;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.network.simple.SimpleChannel;
 
+import java.util.function.Supplier;
+
+@Mod.EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class Networking {
-    private Networking() {}
+    private static final String PROTOCOL_VERSION = "1";
+    
+    public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
+            new ResourceLocation(InventoryManagementMod.MOD_ID, "main"),
+            () -> PROTOCOL_VERSION,
+            PROTOCOL_VERSION::equals,
+            PROTOCOL_VERSION::equals
+    );
 
-    public static void register(IEventBus modEventBus) {
-        modEventBus.addListener(Networking::registerPayloads);
+    private static int packetId = 0;
+    private static int id() {
+        return packetId++;
     }
 
-    private static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1");
-
-        registrar.playToServer(
-                StackC2S.TYPE,
-                StackC2S.STREAM_CODEC,
-                (payload, context) -> context.enqueueWork(() ->
-                        ServerNetworking.handleStack(payload, context))
-        );
-
-        registrar.playToServer(
-                SortC2S.TYPE,
-                SortC2S.STREAM_CODEC,
-                (payload, context) -> context.enqueueWork(() ->
-                        ServerNetworking.handleSort(payload, context))
-        );
-
-        registrar.playToServer(
-                TransferC2S.TYPE,
-                TransferC2S.STREAM_CODEC,
-                (payload, context) -> context.enqueueWork(() ->
-                        ServerNetworking.handleTransfer(payload, context))
-        );
-
+    public static void register() {
+        INSTANCE.registerMessage(id(), StackC2SPacket.class, StackC2SPacket::encode, StackC2SPacket::decode, StackC2SPacket::handle);
+        INSTANCE.registerMessage(id(), SortC2SPacket.class, SortC2SPacket::encode, SortC2SPacket::decode, SortC2SPacket::handle);
+        INSTANCE.registerMessage(id(), TransferC2SPacket.class, TransferC2SPacket::encode, TransferC2SPacket::decode, TransferC2SPacket::handle);
     }
 
-    public record StackC2S(boolean fromPlayerInventory) implements CustomPacketPayload {
-        public static final Type<StackC2S> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(InventoryManagementMod.MOD_ID, "stack_c2s"));
-        public static final StreamCodec<FriendlyByteBuf, StackC2S> STREAM_CODEC = StreamCodec.composite(
-                ByteBufCodecs.BOOL, StackC2S::fromPlayerInventory,
-                StackC2S::new
-        );
+    public static void sendToServer(Object packet) {
+        INSTANCE.sendToServer(packet);
+    }
 
-        @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return TYPE;
+    public static void sendToPlayer(Object packet, ServerPlayer player) {
+        INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet);
+    }
+
+    public static class StackC2SPacket {
+        private final boolean fromPlayerInventory;
+
+        public StackC2SPacket(boolean fromPlayerInventory) {
+            this.fromPlayerInventory = fromPlayerInventory;
+        }
+
+        public static void encode(StackC2SPacket packet, FriendlyByteBuf buf) {
+            buf.writeBoolean(packet.fromPlayerInventory);
+        }
+
+        public static StackC2SPacket decode(FriendlyByteBuf buf) {
+            return new StackC2SPacket(buf.readBoolean());
+        }
+
+        public static void handle(StackC2SPacket packet, Supplier<NetworkEvent.Context> contextSupplier) {
+            NetworkEvent.Context context = contextSupplier.get();
+            context.enqueueWork(() -> ServerNetworking.handleStack(packet, context));
+            context.setPacketHandled(true);
+        }
+
+        public boolean fromPlayerInventory() {
+            return fromPlayerInventory;
         }
     }
 
-    public record SortC2S(boolean isPlayerInventory) implements CustomPacketPayload {
-        public static final Type<SortC2S> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(InventoryManagementMod.MOD_ID, "sort_c2s"));
-        public static final StreamCodec<FriendlyByteBuf, SortC2S> STREAM_CODEC = StreamCodec.composite(
-                ByteBufCodecs.BOOL, SortC2S::isPlayerInventory,
-                SortC2S::new
-        );
+    public static class SortC2SPacket {
+        private final boolean isPlayerInventory;
 
-        @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return TYPE;
+        public SortC2SPacket(boolean isPlayerInventory) {
+            this.isPlayerInventory = isPlayerInventory;
+        }
+
+        public static void encode(SortC2SPacket packet, FriendlyByteBuf buf) {
+            buf.writeBoolean(packet.isPlayerInventory);
+        }
+
+        public static SortC2SPacket decode(FriendlyByteBuf buf) {
+            return new SortC2SPacket(buf.readBoolean());
+        }
+
+        public static void handle(SortC2SPacket packet, Supplier<NetworkEvent.Context> contextSupplier) {
+            NetworkEvent.Context context = contextSupplier.get();
+            context.enqueueWork(() -> ServerNetworking.handleSort(packet, context));
+            context.setPacketHandled(true);
+        }
+
+        public boolean isPlayerInventory() {
+            return isPlayerInventory;
         }
     }
 
-    public record TransferC2S(boolean fromPlayerInventory) implements CustomPacketPayload {
-        public static final Type<TransferC2S> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(InventoryManagementMod.MOD_ID, "transfer_c2s"));
-        public static final StreamCodec<FriendlyByteBuf, TransferC2S> STREAM_CODEC = StreamCodec.composite(
-                ByteBufCodecs.BOOL, TransferC2S::fromPlayerInventory,
-                TransferC2S::new
-        );
+    public static class TransferC2SPacket {
+        private final boolean fromPlayerInventory;
 
-        @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return TYPE;
+        public TransferC2SPacket(boolean fromPlayerInventory) {
+            this.fromPlayerInventory = fromPlayerInventory;
+        }
+
+        public static void encode(TransferC2SPacket packet, FriendlyByteBuf buf) {
+            buf.writeBoolean(packet.fromPlayerInventory);
+        }
+
+        public static TransferC2SPacket decode(FriendlyByteBuf buf) {
+            return new TransferC2SPacket(buf.readBoolean());
+        }
+
+        public static void handle(TransferC2SPacket packet, Supplier<NetworkEvent.Context> contextSupplier) {
+            NetworkEvent.Context context = contextSupplier.get();
+            context.enqueueWork(() -> ServerNetworking.handleTransfer(packet, context));
+            context.setPacketHandled(true);
+        }
+
+        public boolean fromPlayerInventory() {
+            return fromPlayerInventory;
         }
     }
 }

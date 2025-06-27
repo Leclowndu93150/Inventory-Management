@@ -10,7 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 public class DefaultPositionEditScreen extends Screen {
-    private static final ResourceLocation BACKGROUND_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
+    private static final ResourceLocation BACKGROUND_TEXTURE = new ResourceLocation("textures/gui/container/generic_54.png");
     private static final int BACKGROUND_WIDTH = 176;
     private static final int BACKGROUND_HEIGHT = 114 + 3 * 18;
     private static final int BUTTON_WIDTH = 80;
@@ -89,8 +89,8 @@ public class DefaultPositionEditScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+    public void renderBackground(GuiGraphics guiGraphics) {
+        super.renderBackground(guiGraphics);
 
         int x = (this.width - BACKGROUND_WIDTH) / 2;
         int y = (this.height - BACKGROUND_HEIGHT) / 2;
@@ -105,6 +105,7 @@ public class DefaultPositionEditScreen extends Screen {
         guiGraphics.pose().popPose();
         RenderSystem.enableDepthTest();
     }
+
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {

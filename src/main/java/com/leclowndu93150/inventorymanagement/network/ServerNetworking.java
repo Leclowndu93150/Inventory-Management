@@ -1,28 +1,32 @@
 package com.leclowndu93150.inventorymanagement.network;
 
 import com.leclowndu93150.inventorymanagement.inventory.InventoryHelper;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.NetworkEvent;
 
 public final class ServerNetworking {
 
-    public static void handleStack(Networking.StackC2S payload, IPayloadContext context) {
-        if (context.player() instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+    public static void handleStack(Networking.StackC2SPacket packet, NetworkEvent.Context context) {
+        ServerPlayer serverPlayer = context.getSender();
+        if (serverPlayer != null) {
             serverPlayer.getServer().execute(() ->
-                    InventoryHelper.autoStack(serverPlayer, payload.fromPlayerInventory()));
+                    InventoryHelper.autoStack(serverPlayer, packet.fromPlayerInventory()));
         }
     }
 
-    public static void handleSort(Networking.SortC2S payload, IPayloadContext context) {
-        if (context.player() instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+    public static void handleSort(Networking.SortC2SPacket packet, NetworkEvent.Context context) {
+        ServerPlayer serverPlayer = context.getSender();
+        if (serverPlayer != null) {
             serverPlayer.getServer().execute(() ->
-                    InventoryHelper.sortInventory(serverPlayer, payload.isPlayerInventory()));
+                    InventoryHelper.sortInventory(serverPlayer, packet.isPlayerInventory()));
         }
     }
 
-    public static void handleTransfer(Networking.TransferC2S payload, IPayloadContext context) {
-        if (context.player() instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+    public static void handleTransfer(Networking.TransferC2SPacket packet, NetworkEvent.Context context) {
+        ServerPlayer serverPlayer = context.getSender();
+        if (serverPlayer != null) {
             serverPlayer.getServer().execute(() ->
-                    InventoryHelper.transferAll(serverPlayer, payload.fromPlayerInventory()));
+                    InventoryHelper.transferAll(serverPlayer, packet.fromPlayerInventory()));
         }
     }
 }

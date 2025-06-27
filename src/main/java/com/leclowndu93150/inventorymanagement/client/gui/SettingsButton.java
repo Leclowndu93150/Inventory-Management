@@ -11,9 +11,9 @@ import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 
 public class SettingsButton extends InventoryManagementButton {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation TEXTURE = new ResourceLocation(
             InventoryManagementMod.MOD_ID, "textures/gui/settings.png");
-    private static final ResourceLocation TEXTURE_HIGHLIGHTED = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation TEXTURE_HIGHLIGHTED = new ResourceLocation(
             InventoryManagementMod.MOD_ID, "textures/gui/settings_highlighted.png");
 
     public SettingsButton(

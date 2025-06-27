@@ -2,34 +2,33 @@ package com.leclowndu93150.inventorymanagement.events;
 
 import com.leclowndu93150.inventorymanagement.InventoryManagementMod;
 import com.leclowndu93150.inventorymanagement.inventory.AutoStackRefill;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
-import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerDestroyItemEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.common.NeoForge;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.item.ItemTossEvent;
+import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
+import net.minecraftforge.event.entity.player.PlayerDestroyItemEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class AutoRefillEvents {
     private static final Map<String, InteractionHand> lastHandUsed = new HashMap<>();
     
     public static void register() {
-        NeoForge.EVENT_BUS.register(AutoRefillEvents.class);
+        MinecraftForge.EVENT_BUS.register(AutoRefillEvents.class);
         InventoryManagementMod.LOGGER.info("AutoRefillEvents registered");
     }
     
     @SubscribeEvent
-    public static void onServerTick(ServerTickEvent.Pre event) {
-        AutoStackRefill.processTick();
+    public static void onServerTick(TickEvent.ServerTickEvent event) {
+        if(event.phase != TickEvent.Phase.END) {
+            AutoStackRefill.processTick();
+        }
     }
     
     @SubscribeEvent

@@ -35,11 +35,6 @@ authors = "${mod_authors}" #optional
 
 # The description text for the mod (multi line!) (#mandatory)
 description = '''${mod_description}'''
-
-# The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.
-[[mixins]]
-config = "${mod_id}.mixins.json"
-
 # The [[accessTransformers]] block allows you to declare where your AT file is.
 # If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
 #[[accessTransformers]]
@@ -50,11 +45,11 @@ config = "${mod_id}.mixins.json"
 # A dependency - use the . to indicate dependency for a specific modid. Dependencies are optional.
 [[dependencies."${mod_id}"]] #optional
 # the modid of the dependency
-modId = "neoforge" #mandatory
+modId = "forge" #mandatory
 # The type of the dependency. Can be one of "required", "optional", "incompatible" or "discouraged" (case insensitive).
 # 'required' requires the mod to exist, 'optional' does not
 # 'incompatible' will prevent the game from loading when the mod exists, and 'discouraged' will show a warning
-type = "required" #mandatory
+mandatory = true
 # Optional field describing why the dependency is required or why it is incompatible
 # reason="..."
 # The version range of the dependency
@@ -68,7 +63,7 @@ side = "BOTH"
 # Here's another dependency
 [[dependencies."${mod_id}"]]
 modId = "minecraft"
-type = "required"
+mandatory = true
 # This version range declares a minimum of the current minecraft version up to but not including the next major version
 versionRange = "${minecraft_version_range}"
 ordering = "NONE"

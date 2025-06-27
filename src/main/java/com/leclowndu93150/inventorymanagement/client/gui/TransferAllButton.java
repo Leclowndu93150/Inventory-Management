@@ -10,13 +10,13 @@ import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 
 public class TransferAllButton extends InventoryManagementButton {
-    private static final ResourceLocation TEXTURE_FROM = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation TEXTURE_FROM = new ResourceLocation(
             InventoryManagementMod.MOD_ID, "textures/gui/transfer_from.png");
-    private static final ResourceLocation TEXTURE_FROM_HIGHLIGHTED = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation TEXTURE_FROM_HIGHLIGHTED = new ResourceLocation(
             InventoryManagementMod.MOD_ID, "textures/gui/transfer_from_highlighted.png");
-    private static final ResourceLocation TEXTURE_TO = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation TEXTURE_TO = new ResourceLocation(
             InventoryManagementMod.MOD_ID, "textures/gui/transfer_to.png");
-    private static final ResourceLocation TEXTURE_TO_HIGHLIGHTED = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation TEXTURE_TO_HIGHLIGHTED = new ResourceLocation(
             InventoryManagementMod.MOD_ID, "textures/gui/transfer_to_highlighted.png");
 
     public TransferAllButton(

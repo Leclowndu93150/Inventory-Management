@@ -2,24 +2,23 @@ package com.leclowndu93150.inventorymanagement.inventory.sorting;
 
 import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
 import com.leclowndu93150.inventorymanagement.config.SortingMode;
-import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.*;
-import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.FlowerBlock;
 
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 public class ItemStackComparator implements Comparator<ItemStack> {
     private static final List<Comparator<ItemStack>> SUB_COMPARATORS =
@@ -34,7 +33,7 @@ public class ItemStackComparator implements Comparator<ItemStack> {
                                     Comparator.comparingInt(ItemStackComparator::getArmorValue).reversed()
                             )
                     ),
-                    ConditionalComparator.comparing(s -> s.getItem() instanceof AnimalArmorItem,
+                    ConditionalComparator.comparing(s -> s.getItem() instanceof HorseArmorItem,
                             Comparator.comparingInt(ItemStackComparator::getHorseArmorValue).reversed()
                     ),
                     ConditionalComparator.comparing(ItemStackComparator::isPotion,
@@ -153,19 +152,18 @@ public class ItemStackComparator implements Comparator<ItemStack> {
     }
 
     private static boolean isEnchantedBookOrEnchantedItem(ItemStack stack) {
-        return stack.get(DataComponents.ENCHANTMENTS) != null ||
-                stack.get(DataComponents.STORED_ENCHANTMENTS) != null;
+        return !EnchantmentHelper.getEnchantments(stack).isEmpty() ||
+                (stack.getItem() instanceof EnchantedBookItem && !EnchantmentHelper.getEnchantments(stack).isEmpty());
     }
 
     private static String getEnchantmentListAsString(ItemStack stack) {
-        ItemEnchantments component = Optional.ofNullable(stack.get(DataComponents.ENCHANTMENTS))
-                .orElseGet(() -> stack.get(DataComponents.STORED_ENCHANTMENTS));
-        if (component == null) {
+        Map<Enchantment, Integer> enchantments = EnchantmentHelper.getEnchantments(stack);
+        if (enchantments.isEmpty()) {
             return "";
         }
-        return component.entrySet()
+        return enchantments.entrySet()
                 .stream()
-                .map((entry) -> Enchantment.getFullname(entry.getKey(), entry.getIntValue()))
+                .map((entry) -> entry.getKey().getFullname(entry.getValue()))
                 .map(Component::getString)
                 .collect(Collectors.joining(" "));
     }
@@ -186,7 +184,7 @@ public class ItemStackComparator implements Comparator<ItemStack> {
 
     private static int getArmorSlot(ItemStack itemStack) {
         EquipmentSlot slotType = ((ArmorItem) itemStack.getItem()).getEquipmentSlot();
-        int groupValue = slotType.getType() == EquipmentSlot.Type.HUMANOID_ARMOR ? 10 : 0;
+        int groupValue = slotType.getType() == EquipmentSlot.Type.ARMOR ? 10 : 0;
         return groupValue + slotType.getIndex();
     }
 
@@ -195,20 +193,20 @@ public class ItemStackComparator implements Comparator<ItemStack> {
     }
 
     private static int getHorseArmorValue(ItemStack itemStack) {
-        if (itemStack.getItem() instanceof AnimalArmorItem armor) {
-            return armor.getDefense();
+        if (itemStack.getItem() instanceof HorseArmorItem armor) {
+            return armor.getProtection();
         }
         return 0;
     }
 
     private static boolean isPotion(ItemStack stack) {
-        return stack.get(DataComponents.POTION_CONTENTS) != null;
+        return stack.getItem() instanceof PotionItem ||
+                (stack.getItem() instanceof TippedArrowItem && stack.hasTag() && stack.getTag().contains("Potion"));
     }
 
     private static String getPotionEffectName(ItemStack itemStack) {
         return streamPotionStatusEffects(itemStack).map(MobEffectInstance::getEffect)
-                .map(Holder::value)
-                .map(MobEffect::getDisplayName)
+                .map(effect -> effect.getDisplayName())
                 .map(Component::getString)
                 .min(Comparator.naturalOrder())
                 .orElse("");
@@ -223,18 +221,18 @@ public class ItemStackComparator implements Comparator<ItemStack> {
     }
 
     private static Stream<MobEffectInstance> streamPotionStatusEffects(ItemStack stack) {
-        return StreamSupport.stream(getPotionComponent(stack).getAllEffects().spliterator(), false);
-    }
-
-    private static PotionContents getPotionComponent(ItemStack stack) {
-        return Optional.ofNullable(stack.get(DataComponents.POTION_CONTENTS)).orElse(PotionContents.EMPTY);
+        return PotionUtils.getMobEffects(stack).stream();
     }
 
     private static int getColor(ItemStack itemStack) {
         Item item = itemStack.getItem();
 
-        if (itemStack.has(DataComponents.DYED_COLOR)) {
-            return itemStack.get(DataComponents.DYED_COLOR).rgb();
+        // Check for dyed leather armor or other dyeable items
+        if (item instanceof DyeableLeatherItem && itemStack.hasTag()) {
+            CompoundTag displayTag = itemStack.getTagElement("display");
+            if (displayTag != null && displayTag.contains("color", 99)) {
+                return displayTag.getInt("color");
+            }
         }
 
         String itemString = item.toString();
@@ -248,7 +246,7 @@ public class ItemStackComparator implements Comparator<ItemStack> {
     }
 
     private static boolean hasCustomName(ItemStack stack) {
-        return stack.has(DataComponents.CUSTOM_NAME);
+        return stack.hasCustomHoverName();
     }
 
     private static int getHasNameAsInt(ItemStack stack) {
@@ -258,7 +256,7 @@ public class ItemStackComparator implements Comparator<ItemStack> {
     public static ItemStackComparator comparator() {
         return new ItemStackComparator(SerialComparator.comparing(SUB_COMPARATORS));
     }
-    
+
     public static Comparator<ItemStack> comparator(SortingMode mode, List<ItemStack> allStacks) {
         return switch (mode) {
             case ALPHABETICAL -> comparator();

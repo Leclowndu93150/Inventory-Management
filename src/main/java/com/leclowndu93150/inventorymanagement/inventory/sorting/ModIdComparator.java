@@ -1,9 +1,6 @@
 package com.leclowndu93150.inventorymanagement.inventory.sorting;
 
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.common.util.Lazy;
-
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;

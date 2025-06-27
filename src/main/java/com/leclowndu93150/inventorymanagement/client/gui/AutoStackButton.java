@@ -10,13 +10,13 @@ import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 
 public class AutoStackButton extends InventoryManagementButton {
-    private static final ResourceLocation TEXTURE_FROM = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation TEXTURE_FROM = new ResourceLocation(
             InventoryManagementMod.MOD_ID, "textures/gui/stack_from.png");
-    private static final ResourceLocation TEXTURE_FROM_HIGHLIGHTED = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation TEXTURE_FROM_HIGHLIGHTED = new ResourceLocation(
             InventoryManagementMod.MOD_ID, "textures/gui/stack_from_highlighted.png");
-    private static final ResourceLocation TEXTURE_TO = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation TEXTURE_TO = new ResourceLocation(
             InventoryManagementMod.MOD_ID, "textures/gui/stack_to.png");
-    private static final ResourceLocation TEXTURE_TO_HIGHLIGHTED = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation TEXTURE_TO_HIGHLIGHTED = new ResourceLocation(
             InventoryManagementMod.MOD_ID, "textures/gui/stack_to_highlighted.png");
 
     public AutoStackButton(

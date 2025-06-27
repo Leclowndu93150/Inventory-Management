@@ -13,15 +13,15 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
-import net.neoforged.neoforge.client.event.ScreenEvent;
-import net.neoforged.neoforge.common.util.Lazy;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.common.util.Lazy;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 
-@EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = InventoryManagementMod.MOD_ID,bus= Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class InventoryManagementClientMod {
     public static final Lazy<KeyMapping> POSITION_EDIT_PLAYER = Lazy.of(() -> new KeyMapping(
             "inventorymanagement.keybind.position_edit.player",
@@ -91,7 +91,7 @@ public class InventoryManagementClientMod {
         event.register(SORT_HOVERED.get());
     }
 
-    @EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, value = Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, value = Dist.CLIENT)
     public static class ClientEvents {
         @SubscribeEvent
         public static void onScreenInit(ScreenEvent.Init.Post event) {

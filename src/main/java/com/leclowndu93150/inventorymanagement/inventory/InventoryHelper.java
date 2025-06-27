@@ -366,7 +366,7 @@ public class InventoryHelper {
     }
 
     public static boolean areItemStacksMergeable(ItemStack a, ItemStack b) {
-        return !a.isEmpty() && !b.isEmpty() && ItemStack.isSameItemSameComponents(a, b);
+        return !a.isEmpty() && !b.isEmpty() && ItemStack.isSameItemSameTags(a, b);
     }
 
     static class SlotRange {

@@ -2,12 +2,12 @@ package com.leclowndu93150.inventorymanagement.inventory;
 
 import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 
@@ -22,7 +22,7 @@ public class AutoStackRefill {
         try {
             
             if (!addSingleList.isEmpty()) {
-                QueuedRefill refill = addSingleList.removeFirst();
+                QueuedRefill refill = addSingleList.remove(0);
                 if (refill.player.isAlive()) {
                     ItemStack handStack = refill.player.getItemInHand(refill.hand).copy();
                     refill.player.setItemInHand(refill.hand, refill.stackToGive);
@@ -43,7 +43,7 @@ public class AutoStackRefill {
             
             
             if (!checkFishingRodList.isEmpty()) {
-                QueuedFishingRod check = checkFishingRodList.removeFirst();
+                QueuedFishingRod check = checkFishingRodList.remove(0);
                 if (check.player.isAlive() && check.player.getItemInHand(check.hand).isEmpty()) {
                     Inventory inv = check.player.getInventory();
                     for (int i = 35; i > 8; i--) {
@@ -61,7 +61,7 @@ public class AutoStackRefill {
             }
             
             if (!checkItemUsedList.isEmpty()) {
-                QueuedItemCheck check = checkItemUsedList.removeFirst();
+                QueuedItemCheck check = checkItemUsedList.remove(0);
                 if (check.player.isAlive() && !check.player.isUsingItem()) {
                     ItemStack usedStack = check.originalStack;
                     ItemStack handStack = check.player.getItemInHand(check.hand).copy();
@@ -86,7 +86,7 @@ public class AutoStackRefill {
                                 Item slotItem = slot.getItem();
                                 if (usedItem.equals(slotItem)) {
                                     if (slotItem instanceof PotionItem) {
-                                        if (!Objects.equals(usedStack.get(DataComponents.POTION_CONTENTS), slot.get(DataComponents.POTION_CONTENTS))) {
+                                        if (!PotionUtils.getPotion(usedStack).equals(PotionUtils.getPotion(slot))) {
                                             continue;
                                         }
                                     }
@@ -171,7 +171,7 @@ public class AutoStackRefill {
             Item slotItem = slot.getItem();
             if (tossedItem.equals(slotItem)) {
                 if (slotItem instanceof PotionItem) {
-                    if (!Objects.equals(tossedStack.get(DataComponents.POTION_CONTENTS), slot.get(DataComponents.POTION_CONTENTS))) {
+                    if (!PotionUtils.getPotion(tossedStack).equals(PotionUtils.getPotion(slot))) {
                         continue;
                     }
                 }
