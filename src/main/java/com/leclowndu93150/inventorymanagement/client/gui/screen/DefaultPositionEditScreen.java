@@ -94,16 +94,20 @@ public class DefaultPositionEditScreen extends Screen {
 
         int x = (this.width - BACKGROUND_WIDTH) / 2;
         int y = (this.height - BACKGROUND_HEIGHT) / 2;
+        
+        // Render container background with proper z-ordering
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 0);
         guiGraphics.blit(BACKGROUND_TEXTURE, x, y, 0, 0, BACKGROUND_WIDTH, 3 * 18 + 17);
         guiGraphics.blit(BACKGROUND_TEXTURE, x, y + 3 * 18 + 17, 0, 126, BACKGROUND_WIDTH, 96);
+        guiGraphics.pose().popPose();
 
-        RenderSystem.disableDepthTest();
+        // Render text labels
         guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(x, y, 0);
+        guiGraphics.pose().translate(x, y, 100);
         guiGraphics.drawString(this.font, Component.translatable("container.chest"), 8, 6, 0x404040, false);
         guiGraphics.drawString(this.font, Component.translatable("container.inventory"), 8, BACKGROUND_HEIGHT - 94, 0x404040, false);
         guiGraphics.pose().popPose();
-        RenderSystem.enableDepthTest();
     }
 
 

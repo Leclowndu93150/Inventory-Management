@@ -52,7 +52,7 @@ public class InventorySettingsScreen extends Screen {
         int centerX = this.width / 2;
         
         // Create scrollable list
-        this.settingsList = new SettingsList(this.minecraft, this.width, this.height, 40, this.height - 100, 25);
+        this.settingsList = new SettingsList(this.minecraft, this.width, this.height, 40, this.height - 40, 25);
         this.addWidget(this.settingsList);
 
         // Button visibility toggles
@@ -143,23 +143,35 @@ public class InventorySettingsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // Render parent screen first (blurred)
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0, 0, -100);
-        this.parent.render(guiGraphics, -1, -1, partialTick);
-        guiGraphics.pose().popPose();
+        this.renderBackground(guiGraphics);
         
-        // Dark background overlay
-        guiGraphics.fill(0, 0, this.width, this.height, 0x80000000);
+        // Render scrollable list
+        this.settingsList.render(guiGraphics, mouseX, mouseY, partialTick);
         
         // Render UI components (buttons)
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         
-        // Render scrollable list AFTER the background
-        this.settingsList.render(guiGraphics, mouseX, mouseY, partialTick);
-        
         // Title on top
         guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
+    }
+
+    @Override
+    public void renderBackground(GuiGraphics guiGraphics) {
+        this.renderBlurredBackground(guiGraphics);
+        this.renderMenuBackground(guiGraphics);
+    }
+    
+    private void renderBlurredBackground(GuiGraphics guiGraphics) {
+        // Render the parent screen with blur effect
+        if (this.minecraft.level != null) {
+            guiGraphics.fill(0, 0, this.width, this.height, 0xC0101010);
+        } else {
+            this.renderDirtBackground(guiGraphics);
+        }
+    }
+    
+    private void renderMenuBackground(GuiGraphics guiGraphics) {
+        guiGraphics.fill(0, 0, this.width, this.height, 0x80000000);
     }
 
     @Override
