@@ -21,7 +21,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 
-@Mod.EventBusSubscriber(modid = InventoryManagementMod.MOD_ID,bus= Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class InventoryManagementClientMod {
     public static final Lazy<KeyMapping> POSITION_EDIT_PLAYER = Lazy.of(() -> new KeyMapping(
             "inventorymanagement.keybind.position_edit.player",
@@ -91,11 +91,12 @@ public class InventoryManagementClientMod {
         event.register(SORT_HOVERED.get());
     }
 
-    @Mod.EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, value = Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
     public static class ClientEvents {
         @SubscribeEvent
         public static void onScreenInit(ScreenEvent.Init.Post event) {
             if (event.getScreen() instanceof AbstractContainerScreen<?> containerScreen) {
+                DebugManager.onScreenOpen(containerScreen);
                 InventoryButtonsManager.INSTANCE.init(containerScreen, event::addListener);
             }
         }
@@ -166,18 +167,10 @@ public class InventoryManagementClientMod {
         }
     }
 
-    public static void playClickSound(){
+    public static void playClickSound() {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player != null) {
             minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.25F, 1.0F);
-        }
-    }
-
-    @SubscribeEvent
-    public static void onScreenInit(ScreenEvent.Init.Post event) {
-        if (event.getScreen() instanceof AbstractContainerScreen<?> containerScreen) {
-            DebugManager.onScreenOpen(containerScreen);
-            InventoryButtonsManager.INSTANCE.init(containerScreen, event::addListener);
         }
     }
 }
