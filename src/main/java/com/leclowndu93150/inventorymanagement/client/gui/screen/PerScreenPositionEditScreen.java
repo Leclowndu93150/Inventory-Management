@@ -64,7 +64,7 @@ public class PerScreenPositionEditScreen extends Screen {
 
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> {
             if (hasBlockId) {
-                InventoryManagementConfig.getInstance().setBlockPosition(blockId, isPlayerInventory, currentPosition);
+                InventoryManagementConfig.getInstance().setBlockPosition(parent, blockId, isPlayerInventory, currentPosition);
             } else {
                 InventoryManagementConfig.getInstance().setScreenPosition(parent, isPlayerInventory, currentPosition);
             }
@@ -119,8 +119,10 @@ public class PerScreenPositionEditScreen extends Screen {
                 0xFFFFFF);
 
         if (hasBlockId) {
+            String displayText = InventoryManagementConfig.isSimpleContainer(parent) ? 
+                    "Simple Container (synced)" : "Block: " + this.blockId;
             guiGraphics.drawString(this.font,
-                    "Block: " + this.blockId,
+                    displayText,
                     4,
                     16,
                     0x00FF00);

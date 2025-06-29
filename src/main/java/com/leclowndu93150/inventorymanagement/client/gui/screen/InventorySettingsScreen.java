@@ -19,6 +19,7 @@ public class InventorySettingsScreen extends Screen {
     private final Screen parent;
     private SortingMode currentSortingMode;
     private boolean autoRefillEnabled;
+    private boolean autoRefillFromShulkers;
     private boolean modEnabled;
     private boolean showSort;
     private boolean showTransfer;
@@ -37,6 +38,7 @@ public class InventorySettingsScreen extends Screen {
         InventoryManagementConfig config = InventoryManagementConfig.getInstance();
         this.currentSortingMode = config.sortingMode.get();
         this.autoRefillEnabled = config.autoRefillEnabled.get();
+        this.autoRefillFromShulkers = config.autoRefillFromShulkers.get();
         this.modEnabled = config.modEnabled.get();
         this.showSort = config.showSort.get();
         this.showTransfer = config.showTransfer.get();
@@ -83,6 +85,12 @@ public class InventorySettingsScreen extends Screen {
                 Component.translatable("inventorymanagement.settings.auto_refill"),
                 this.autoRefillEnabled,
                 value -> this.autoRefillEnabled = value));
+
+        // Auto refill from shulkers toggle button
+        this.settingsList.addEntry(new SettingsList.BooleanEntry(
+                Component.translatable("inventorymanagement.settings.auto_refill_shulkers"),
+                this.autoRefillFromShulkers,
+                value -> this.autoRefillFromShulkers = value));
 
         // Dynamic detection toggle
         this.settingsList.addEntry(new SettingsList.BooleanEntry(
@@ -183,6 +191,7 @@ public class InventorySettingsScreen extends Screen {
         InventoryManagementConfig config = InventoryManagementConfig.getInstance();
         config.sortingMode.set(this.currentSortingMode);
         config.autoRefillEnabled.set(this.autoRefillEnabled);
+        config.autoRefillFromShulkers.set(this.autoRefillFromShulkers);
         config.showSort.set(this.showSort);
         config.showTransfer.set(this.showTransfer);
         config.showStack.set(this.showStack);

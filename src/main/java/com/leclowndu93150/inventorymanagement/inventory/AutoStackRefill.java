@@ -10,6 +10,11 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
+import net.minecraft.world.Container;
+import net.minecraft.world.ContainerHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 
 import java.util.*;
 
@@ -81,6 +86,7 @@ public class AutoStackRefill {
                         if (shouldRefill) {
                             Item usedItem = usedStack.getItem();
                             Inventory inv = check.player.getInventory();
+                            boolean found = false;
                             for (int i = 35; i > 8; i--) {
                                 ItemStack slot = inv.getItem(i);
                                 Item slotItem = slot.getItem();
@@ -104,7 +110,25 @@ public class AutoStackRefill {
                                     check.player.getInventory().setChanged();
                                     
                                     check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
+                                    found = true;
                                     break;
+                                }
+                            }
+                            
+                            // If not found in regular inventory, check shulker boxes
+                            if (!found) {
+                                ItemStack fromShulker = findInShulkerBoxes(check.player, usedItem, usedStack);
+                                if (!fromShulker.isEmpty()) {
+                                    check.player.setItemInHand(check.hand, fromShulker);
+                                    
+                                    if (!handStack.isEmpty()) {
+                                        Inventory playerInv = check.player.getInventory();
+                                        if (!playerInv.add(handStack)) {
+                                            check.player.drop(handStack, false);
+                                        }
+                                    }
+                                    
+                                    check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                                 }
                             }
                         }
@@ -141,6 +165,7 @@ public class AutoStackRefill {
         }
 
         Inventory inv = player.getInventory();
+        boolean found = false;
         for (int i = 35; i > 8; i--) {
             ItemStack slot = inv.getItem(i);
             Item slotItem = slot.getItem();
@@ -148,7 +173,16 @@ public class AutoStackRefill {
                 addSingleList.add(new QueuedRefill(player, slot.copy(), hand));
                 slot.setCount(0);
                 player.getInventory().setChanged();
+                found = true;
                 break;
+            }
+        }
+        
+        // If not found in regular inventory, check shulker boxes
+        if (!found) {
+            ItemStack fromShulker = findInShulkerBoxes(player, usedItem, used);
+            if (!fromShulker.isEmpty()) {
+                addSingleList.add(new QueuedRefill(player, fromShulker, hand));
             }
         }
     }
@@ -166,6 +200,7 @@ public class AutoStackRefill {
         }
 
         Inventory inv = player.getInventory();
+        boolean found = false;
         for (int i = 35; i > 8; i--) {
             ItemStack slot = inv.getItem(i);
             Item slotItem = slot.getItem();
@@ -181,7 +216,17 @@ public class AutoStackRefill {
                 player.getInventory().setChanged();
                 
                 player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
+                found = true;
                 break;
+            }
+        }
+        
+        // If not found in regular inventory, check shulker boxes
+        if (!found) {
+            ItemStack fromShulker = findInShulkerBoxes(player, tossedItem, tossedStack);
+            if (!fromShulker.isEmpty()) {
+                player.setItemInHand(InteractionHand.MAIN_HAND, fromShulker);
+                player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
             }
         }
     }
@@ -224,6 +269,54 @@ public class AutoStackRefill {
 
     private static boolean shouldRefill(Player player) {
         return !player.isCreative() && InventoryManagementConfig.getInstance().autoRefillEnabled.get();
+    }
+
+    private static ItemStack findInShulkerBoxes(Player player, Item targetItem, ItemStack originalStack) {
+        if (!InventoryManagementConfig.getInstance().autoRefillFromShulkers.get()) {
+            return ItemStack.EMPTY;
+        }
+
+        Inventory inv = player.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (stack.getItem() instanceof BlockItem blockItem && 
+                blockItem.getBlock() instanceof ShulkerBoxBlock) {
+                
+                CompoundTag tag = stack.getTag();
+                if (tag != null && tag.contains("BlockEntityTag")) {
+                    CompoundTag blockEntityTag = tag.getCompound("BlockEntityTag");
+                    if (blockEntityTag.contains("Items")) {
+                        ListTag items = blockEntityTag.getList("Items", 10);
+                        
+                        for (int j = 0; j < items.size(); j++) {
+                            CompoundTag itemTag = items.getCompound(j);
+                            ItemStack itemInBox = ItemStack.of(itemTag);
+                            
+                            if (itemInBox.getItem().equals(targetItem)) {
+                                if (targetItem instanceof PotionItem && originalStack != null) {
+                                    if (!PotionUtils.getPotion(originalStack).equals(PotionUtils.getPotion(itemInBox))) {
+                                        continue;
+                                    }
+                                }
+                                
+                                // Remove the item from the shulker box
+                                items.remove(j);
+                                if (items.isEmpty()) {
+                                    blockEntityTag.remove("Items");
+                                    if (blockEntityTag.isEmpty()) {
+                                        tag.remove("BlockEntityTag");
+                                    }
+                                }
+                                
+                                return itemInBox;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return ItemStack.EMPTY;
     }
 
     private static class QueuedRefill {
