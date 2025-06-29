@@ -3,6 +3,7 @@ package com.leclowndu93150.inventorymanagement.config;
 import com.leclowndu93150.inventorymanagement.client.ClientBlockTracker;
 import com.leclowndu93150.inventorymanagement.compat.ModCompatibilityManager;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
 import com.google.gson.Gson;
@@ -34,6 +35,7 @@ public class InventoryManagementConfig {
     public final ModConfigSpec.IntValue defaultOffsetY;
     public final ModConfigSpec.EnumValue<SortingMode> sortingMode;
     public final ModConfigSpec.BooleanValue autoRefillEnabled;
+    public final ModConfigSpec.BooleanValue autoRefillFromShulkers;
     public final ModConfigSpec.BooleanValue ignoreHotbarInTransfer;
 
     // Mod compatibility config
@@ -91,6 +93,10 @@ public class InventoryManagementConfig {
         autoRefillEnabled = builder
                 .comment("Enable automatic stack refilling when items are used up")
                 .define("autoRefillEnabled", true);
+
+        autoRefillFromShulkers = builder
+                .comment("Enable automatic refilling from shulker boxes in inventory")
+                .define("autoRefillFromShulkers", true);
 
         ignoreHotbarInTransfer = builder
                 .comment("Ignore hotbar items when using Transfer All to Container")
@@ -213,9 +219,16 @@ public class InventoryManagementConfig {
     public Optional<Position> getButtonPosition(Screen screen, boolean isPlayerInventory) {
         String blockId = ClientBlockTracker.getInstance().getBlockIdForScreen(screen);
         if (blockId != null) {
-            Optional<Position> blockPos = getBlockPosition(blockId, isPlayerInventory);
-            if (blockPos.isPresent()) {
-                return blockPos;
+            if (isSimpleContainer(screen)) {
+                Optional<Position> simplePos = getBlockPosition("simple_container", isPlayerInventory);
+                if (simplePos.isPresent()) {
+                    return simplePos;
+                }
+            } else {
+                Optional<Position> blockPos = getBlockPosition(blockId, isPlayerInventory);
+                if (blockPos.isPresent()) {
+                    return blockPos;
+                }
             }
         }
         return getScreenPosition(screen, isPlayerInventory);
@@ -243,6 +256,19 @@ public class InventoryManagementConfig {
 
     public void setBlockPosition(String blockId, boolean isPlayerInventory, Position position) {
         String key = getBlockKey(blockId, isPlayerInventory);
+
+        if (position.equals(getDefaultPosition())) {
+            blockPositions.remove(key);
+        } else {
+            blockPositions.put(key, position);
+        }
+        saveBlockPositions();
+    }
+
+    public void setBlockPosition(Screen screen, String blockId, boolean isPlayerInventory, Position position) {
+        String actualBlockId = isSimpleContainer(screen) ? "simple_container" : blockId;
+        String key = getBlockKey(actualBlockId, isPlayerInventory);
+
         if (position.equals(getDefaultPosition())) {
             blockPositions.remove(key);
         } else {
@@ -285,6 +311,41 @@ public class InventoryManagementConfig {
 
     private static String getBlockKey(String blockId, boolean isPlayerInventory) {
         return blockId + (isPlayerInventory ? "-player" : "-container");
+    }
+
+    public static boolean isSimpleContainer(Screen screen) {
+        if (!(screen instanceof AbstractContainerScreen<?> containerScreen)) return false;
+
+        String screenClassName = screen.getClass().getName();
+
+        if (screenClassName.equals("net.minecraft.client.gui.screens.inventory.ContainerScreen") ||
+                screenClassName.equals("net.minecraft.client.gui.screens.inventory.ChestScreen") ||
+                screenClassName.equals("net.minecraft.client.gui.screens.inventory.DispenserScreen") ||
+                screenClassName.equals("net.minecraft.client.gui.screens.inventory.HopperScreen")) {
+            return true;
+        }
+
+        var menu = containerScreen.getMenu();
+        String menuClassName = menu.getClass().getName();
+
+        if (menuClassName.equals("net.minecraft.world.inventory.ChestMenu") ||
+                menuClassName.equals("net.minecraft.world.inventory.DispenserMenu") ||
+                menuClassName.equals("net.minecraft.world.inventory.HopperMenu")) {
+            return true;
+        }
+
+        // For modded containers, check if they extend vanilla simple container screens
+        Class<?> parent = screen.getClass().getSuperclass();
+        while (parent != null && parent != Screen.class) {
+            String parentName = parent.getName();
+            if (parentName.equals("net.minecraft.client.gui.screens.inventory.ContainerScreen") ||
+                    parentName.equals("net.minecraft.client.gui.screens.inventory.ChestScreen")) {
+                return true;
+            }
+            parent = parent.getSuperclass();
+        }
+
+        return false;
     }
 
     public void save() {

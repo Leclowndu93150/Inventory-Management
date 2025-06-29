@@ -19,7 +19,7 @@ public class InventorySettingsScreen extends Screen {
     private final Screen parent;
     private SortingMode currentSortingMode;
     private boolean autoRefillEnabled;
-    private boolean modEnabled;
+    private boolean autoRefillFromShulkers;
     private boolean showSort;
     private boolean showTransfer;
     private boolean showStack;
@@ -37,7 +37,7 @@ public class InventorySettingsScreen extends Screen {
         InventoryManagementConfig config = InventoryManagementConfig.getInstance();
         this.currentSortingMode = config.sortingMode.get();
         this.autoRefillEnabled = config.autoRefillEnabled.get();
-        this.modEnabled = config.modEnabled.get();
+        this.autoRefillFromShulkers = config.autoRefillFromShulkers.get();
         this.showSort = config.showSort.get();
         this.showTransfer = config.showTransfer.get();
         this.showStack = config.showStack.get();
@@ -83,6 +83,12 @@ public class InventorySettingsScreen extends Screen {
                 Component.translatable("inventorymanagement.settings.auto_refill"),
                 this.autoRefillEnabled,
                 value -> this.autoRefillEnabled = value));
+
+        // Auto refill from shulkers toggle buttonAdd commentMore actions
+        this.settingsList.addEntry(new SettingsList.BooleanEntry(
+                Component.translatable("inventorymanagement.settings.auto_refill_shulkers"),
+                this.autoRefillFromShulkers,
+                value -> this.autoRefillFromShulkers = value));
 
         // Dynamic detection toggle
         this.settingsList.addEntry(new SettingsList.BooleanEntry(
@@ -171,6 +177,7 @@ public class InventorySettingsScreen extends Screen {
         InventoryManagementConfig config = InventoryManagementConfig.getInstance();
         config.sortingMode.set(this.currentSortingMode);
         config.autoRefillEnabled.set(this.autoRefillEnabled);
+        config.autoRefillFromShulkers.set(this.autoRefillFromShulkers);
         config.showSort.set(this.showSort);
         config.showTransfer.set(this.showTransfer);
         config.showStack.set(this.showStack);

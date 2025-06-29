@@ -8,7 +8,9 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.phys.BlockHitResult;
 
 import java.util.*;
@@ -20,28 +22,28 @@ public class AutoStackRefill {
 
     public static void processTick() {
         try {
-            
+
             if (!addSingleList.isEmpty()) {
                 QueuedRefill refill = addSingleList.removeFirst();
                 if (refill.player.isAlive()) {
                     ItemStack handStack = refill.player.getItemInHand(refill.hand).copy();
                     refill.player.setItemInHand(refill.hand, refill.stackToGive);
-                    
+
                     if (!handStack.isEmpty()) {
-                        
+
                         Inventory inv = refill.player.getInventory();
                         if (!inv.add(handStack)) {
                             refill.player.drop(handStack, false);
                         }
                     }
                     refill.player.getInventory().setChanged();
-                    
-                    
+
+
                     refill.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                 }
             }
-            
-            
+
+
             if (!checkFishingRodList.isEmpty()) {
                 QueuedFishingRod check = checkFishingRodList.removeFirst();
                 if (check.player.isAlive() && check.player.getItemInHand(check.hand).isEmpty()) {
@@ -52,20 +54,20 @@ public class AutoStackRefill {
                             check.player.setItemInHand(check.hand, slot.copy());
                             slot.setCount(0);
                             check.player.getInventory().setChanged();
-                            
+
                             check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                             break;
                         }
                     }
                 }
             }
-            
+
             if (!checkItemUsedList.isEmpty()) {
                 QueuedItemCheck check = checkItemUsedList.removeFirst();
                 if (check.player.isAlive() && !check.player.isUsingItem()) {
                     ItemStack usedStack = check.originalStack;
                     ItemStack handStack = check.player.getItemInHand(check.hand).copy();
-                    
+
                     if (!(usedStack.getItem().equals(handStack.getItem()) && usedStack.getCount() == handStack.getCount())) {
                         boolean shouldRefill = false;
                         if (handStack.getCount() <= 1) {
@@ -77,10 +79,11 @@ public class AutoStackRefill {
                                 shouldRefill = true;
                             }
                         }
-                        
+
                         if (shouldRefill) {
                             Item usedItem = usedStack.getItem();
                             Inventory inv = check.player.getInventory();
+                            boolean found = false;
                             for (int i = 35; i > 8; i--) {
                                 ItemStack slot = inv.getItem(i);
                                 Item slotItem = slot.getItem();
@@ -90,21 +93,38 @@ public class AutoStackRefill {
                                             continue;
                                         }
                                     }
-                                    
+
                                     check.player.setItemInHand(check.hand, slot.copy());
                                     slot.setCount(0);
-                                    
+
                                     if (!handStack.isEmpty()) {
                                         Inventory playerInv = check.player.getInventory();
                                         if (!playerInv.add(handStack)) {
                                             check.player.drop(handStack, false);
                                         }
                                     }
-                                    
+
                                     check.player.getInventory().setChanged();
-                                    
+
                                     check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
+                                    found = true;
                                     break;
+                                }
+                            }
+
+                            if (!found) {
+                                ItemStack fromShulker = findInShulkerBoxes(check.player, usedItem, usedStack);
+                                if (!fromShulker.isEmpty()) {
+                                    check.player.setItemInHand(check.hand, fromShulker);
+
+                                    if (!handStack.isEmpty()) {
+                                        Inventory playerInv = check.player.getInventory();
+                                        if (!playerInv.add(handStack)) {
+                                            check.player.drop(handStack, false);
+                                        }
+                                    }
+
+                                    check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                                 }
                             }
                         }
@@ -141,6 +161,7 @@ public class AutoStackRefill {
         }
 
         Inventory inv = player.getInventory();
+        boolean found = false;
         for (int i = 35; i > 8; i--) {
             ItemStack slot = inv.getItem(i);
             Item slotItem = slot.getItem();
@@ -148,7 +169,15 @@ public class AutoStackRefill {
                 addSingleList.add(new QueuedRefill(player, slot.copy(), hand));
                 slot.setCount(0);
                 player.getInventory().setChanged();
+                found = true;
                 break;
+            }
+        }
+
+        if (!found) {
+            ItemStack fromShulker = findInShulkerBoxes(player, usedItem, used);
+            if (!fromShulker.isEmpty()) {
+                addSingleList.add(new QueuedRefill(player, fromShulker, hand));
             }
         }
     }
@@ -166,6 +195,7 @@ public class AutoStackRefill {
         }
 
         Inventory inv = player.getInventory();
+        boolean found = false;
         for (int i = 35; i > 8; i--) {
             ItemStack slot = inv.getItem(i);
             Item slotItem = slot.getItem();
@@ -179,9 +209,18 @@ public class AutoStackRefill {
                 player.setItemInHand(InteractionHand.MAIN_HAND, slot.copy());
                 slot.setCount(0);
                 player.getInventory().setChanged();
-                
+
                 player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
+                found = true;
                 break;
+            }
+        }
+
+        if (!found) {
+            ItemStack fromShulker = findInShulkerBoxes(player, tossedItem, tossedStack);
+            if (!fromShulker.isEmpty()) {
+                player.setItemInHand(InteractionHand.MAIN_HAND, fromShulker);
+                player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
             }
         }
     }
@@ -224,6 +263,48 @@ public class AutoStackRefill {
 
     private static boolean shouldRefill(Player player) {
         return !player.isCreative() && InventoryManagementConfig.getInstance().autoRefillEnabled.get();
+    }
+
+    private static ItemStack findInShulkerBoxes(Player player, Item targetItem, ItemStack originalStack) {
+        if (!InventoryManagementConfig.getInstance().autoRefillFromShulkers.get()) {
+            return ItemStack.EMPTY;
+        }
+
+        Inventory inv = player.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (stack.getItem() instanceof BlockItem blockItem &&
+                    blockItem.getBlock() instanceof ShulkerBoxBlock) {
+
+                var containerComponent = stack.get(DataComponents.CONTAINER);
+                if (containerComponent != null) {
+                    var items = containerComponent.stream().toList();
+
+                    for (int j = 0; j < items.size(); j++) {
+                        ItemStack itemInBox = items.get(j);
+
+                        if (itemInBox.getItem().equals(targetItem)) {
+                            if (targetItem instanceof PotionItem && originalStack != null) {
+                                var originalPotion = originalStack.get(DataComponents.POTION_CONTENTS);
+                                var boxPotion = itemInBox.get(DataComponents.POTION_CONTENTS);
+                                if (originalPotion != null && boxPotion != null &&
+                                        !originalPotion.potion().equals(boxPotion.potion())) {
+                                    continue;
+                                }
+                            }
+
+                            var newItems = new ArrayList<>(items);
+                            newItems.remove(j);
+                            stack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(newItems));
+
+                            return itemInBox;
+                        }
+                    }
+                }
+            }
+        }
+
+        return ItemStack.EMPTY;
     }
 
     private static class QueuedRefill {
