@@ -32,6 +32,7 @@ public final class Networking {
         INSTANCE.registerMessage(id(), StackC2SPacket.class, StackC2SPacket::encode, StackC2SPacket::decode, StackC2SPacket::handle);
         INSTANCE.registerMessage(id(), SortC2SPacket.class, SortC2SPacket::encode, SortC2SPacket::decode, SortC2SPacket::handle);
         INSTANCE.registerMessage(id(), TransferC2SPacket.class, TransferC2SPacket::encode, TransferC2SPacket::decode, TransferC2SPacket::handle);
+        INSTANCE.registerMessage(id(), PlayerConfigSyncPacket.class, PlayerConfigSyncPacket::encode, PlayerConfigSyncPacket::decode, PlayerConfigSyncPacket::handle);
     }
 
     public static void sendToServer(Object packet) {

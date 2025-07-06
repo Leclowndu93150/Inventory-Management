@@ -26,9 +26,10 @@ public class AutoRefillEvents {
     
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
-        if(event.phase != TickEvent.Phase.END) {
-            AutoStackRefill.processTick();
+        if(event.phase != TickEvent.Phase.START) {
+            return;
         }
+        AutoStackRefill.processTick();
     }
     
     @SubscribeEvent

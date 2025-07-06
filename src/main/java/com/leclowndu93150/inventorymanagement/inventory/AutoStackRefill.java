@@ -1,6 +1,8 @@
 package com.leclowndu93150.inventorymanagement.inventory;
 
 import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
+import com.leclowndu93150.inventorymanagement.server.ServerPlayerConfigManager;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
@@ -41,6 +43,10 @@ public class AutoStackRefill {
                     }
                     refill.player.getInventory().setChanged();
                     
+                    // FORCE FULL INVENTORY SYNC
+                    if (refill.player instanceof ServerPlayer serverPlayer) {
+                        serverPlayer.containerMenu.broadcastChanges();
+                    }
                     
                     refill.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                 }
@@ -57,6 +63,11 @@ public class AutoStackRefill {
                             check.player.setItemInHand(check.hand, slot.copy());
                             slot.setCount(0);
                             check.player.getInventory().setChanged();
+                            
+                            // FORCE FULL INVENTORY SYNC
+                            if (check.player instanceof ServerPlayer serverPlayer) {
+                                serverPlayer.containerMenu.broadcastChanges();
+                            }
                             
                             check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                             break;
@@ -109,6 +120,11 @@ public class AutoStackRefill {
                                     
                                     check.player.getInventory().setChanged();
                                     
+                                    // FORCE FULL INVENTORY SYNC
+                                    if (check.player instanceof ServerPlayer serverPlayer) {
+                                        serverPlayer.containerMenu.broadcastChanges();
+                                    }
+                                    
                                     check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                                     found = true;
                                     break;
@@ -126,6 +142,13 @@ public class AutoStackRefill {
                                         if (!playerInv.add(handStack)) {
                                             check.player.drop(handStack, false);
                                         }
+                                    }
+                                    
+                                    check.player.getInventory().setChanged();
+                                    
+                                    // FORCE FULL INVENTORY SYNC
+                                    if (check.player instanceof ServerPlayer serverPlayer) {
+                                        serverPlayer.containerMenu.broadcastChanges();
                                     }
                                     
                                     check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
@@ -173,6 +196,12 @@ public class AutoStackRefill {
                 addSingleList.add(new QueuedRefill(player, slot.copy(), hand));
                 slot.setCount(0);
                 player.getInventory().setChanged();
+                
+                // FORCE FULL INVENTORY SYNC
+                if (player instanceof ServerPlayer serverPlayer) {
+                    serverPlayer.containerMenu.broadcastChanges();
+                }
+                
                 found = true;
                 break;
             }
@@ -215,6 +244,11 @@ public class AutoStackRefill {
                 slot.setCount(0);
                 player.getInventory().setChanged();
                 
+                // FORCE FULL INVENTORY SYNC
+                if (player instanceof ServerPlayer serverPlayer) {
+                    serverPlayer.containerMenu.broadcastChanges();
+                }
+                
                 player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                 found = true;
                 break;
@@ -226,6 +260,13 @@ public class AutoStackRefill {
             ItemStack fromShulker = findInShulkerBoxes(player, tossedItem, tossedStack);
             if (!fromShulker.isEmpty()) {
                 player.setItemInHand(InteractionHand.MAIN_HAND, fromShulker);
+                player.getInventory().setChanged();
+                
+                // FORCE FULL INVENTORY SYNC
+                if (player instanceof ServerPlayer serverPlayer) {
+                    serverPlayer.containerMenu.broadcastChanges();
+                }
+                
                 player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
             }
         }
@@ -268,11 +309,46 @@ public class AutoStackRefill {
     }
 
     private static boolean shouldRefill(Player player) {
-        return !player.isCreative() && InventoryManagementConfig.getInstance().autoRefillEnabled.get();
+        if (player.isCreative()) {
+            return false;
+        }
+        
+        // On server side, use per-player config
+        if (player instanceof ServerPlayer serverPlayer) {
+            ServerPlayerConfigManager.PlayerConfigData config = 
+                    ServerPlayerConfigManager.getInstance().getPlayerConfig(serverPlayer);
+            return config.isAutoRefillEnabled();
+        }
+        
+        // On client side, use client config (fallback, shouldn't happen on server)
+        try {
+            return InventoryManagementConfig.getInstance().autoRefillEnabled.get();
+        } catch (Exception e) {
+            // Config not loaded, default to false
+            return false;
+        }
     }
 
     private static ItemStack findInShulkerBoxes(Player player, Item targetItem, ItemStack originalStack) {
-        if (!InventoryManagementConfig.getInstance().autoRefillFromShulkers.get()) {
+        // Check if auto refill from shulkers is enabled
+        boolean autoRefillFromShulkers = false;
+        
+        // On server side, use per-player config
+        if (player instanceof ServerPlayer serverPlayer) {
+            ServerPlayerConfigManager.PlayerConfigData config = 
+                    ServerPlayerConfigManager.getInstance().getPlayerConfig(serverPlayer);
+            autoRefillFromShulkers = config.isAutoRefillFromShulkers();
+        } else {
+            // On client side, use client config (fallback, shouldn't happen on server)
+            try {
+                autoRefillFromShulkers = InventoryManagementConfig.getInstance().autoRefillFromShulkers.get();
+            } catch (Exception e) {
+                // Config not loaded, default to false
+                autoRefillFromShulkers = false;
+            }
+        }
+        
+        if (!autoRefillFromShulkers) {
             return ItemStack.EMPTY;
         }
 

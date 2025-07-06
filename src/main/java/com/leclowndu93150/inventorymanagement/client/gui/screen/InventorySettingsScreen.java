@@ -1,6 +1,7 @@
 package com.leclowndu93150.inventorymanagement.client.gui.screen;
 
 import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
+import com.leclowndu93150.inventorymanagement.client.network.ClientNetworking;
 import com.leclowndu93150.inventorymanagement.config.SortingMode;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.*;
@@ -63,53 +64,80 @@ public class InventorySettingsScreen extends Screen {
         this.settingsList.addEntry(new SettingsList.BooleanEntry(
                 Component.translatable("inventorymanagement.settings.show_settings"),
                 this.showSettingsButton,
-                value -> this.showSettingsButton = value));
+                value -> {
+                    this.showSettingsButton = value;
+                    saveAndSyncConfig();
+                }));
 
         this.settingsList.addEntry(new SettingsList.BooleanEntry(
                 Component.translatable("inventorymanagement.settings.show_sort"),
                 this.showSort,
-                value -> this.showSort = value));
+                value -> {
+                    this.showSort = value;
+                    saveAndSyncConfig();
+                }));
 
         this.settingsList.addEntry(new SettingsList.BooleanEntry(
                 Component.translatable("inventorymanagement.settings.show_transfer"),
                 this.showTransfer,
-                value -> this.showTransfer = value));
+                value -> {
+                    this.showTransfer = value;
+                    saveAndSyncConfig();
+                }));
 
         this.settingsList.addEntry(new SettingsList.BooleanEntry(
                 Component.translatable("inventorymanagement.settings.show_stack"),
                 this.showStack,
-                value -> this.showStack = value));
+                value -> {
+                    this.showStack = value;
+                    saveAndSyncConfig();
+                }));
 
         // Sorting mode cycle button
         this.settingsList.addEntry(new SettingsList.EnumEntry<>(
                 Component.translatable("inventorymanagement.settings.sort_mode"),
                 SortingMode.class,
                 this.currentSortingMode,
-                value -> this.currentSortingMode = value));
+                value -> {
+                    this.currentSortingMode = value;
+                    saveAndSyncConfig();
+                }));
 
         // Auto refill toggle button
         this.settingsList.addEntry(new SettingsList.BooleanEntry(
                 Component.translatable("inventorymanagement.settings.auto_refill"),
                 this.autoRefillEnabled,
-                value -> this.autoRefillEnabled = value));
+                value -> {
+                    this.autoRefillEnabled = value;
+                    saveAndSyncConfig();
+                }));
 
         // Auto refill from shulkers toggle button
         this.settingsList.addEntry(new SettingsList.BooleanEntry(
                 Component.translatable("inventorymanagement.settings.auto_refill_shulkers"),
                 this.autoRefillFromShulkers,
-                value -> this.autoRefillFromShulkers = value));
+                value -> {
+                    this.autoRefillFromShulkers = value;
+                    saveAndSyncConfig();
+                }));
 
         // Dynamic detection toggle
         this.settingsList.addEntry(new SettingsList.BooleanEntry(
                 Component.translatable("inventorymanagement.settings.dynamic_detection"),
                 this.enableDynamicDetection,
-                value -> this.enableDynamicDetection = value));
+                value -> {
+                    this.enableDynamicDetection = value;
+                    saveAndSyncConfig();
+                }));
 
         // Ignore hotbar in transfer toggle
         this.settingsList.addEntry(new SettingsList.BooleanEntry(
                 Component.translatable("inventorymanagement.settings.ignore_hotbar_transfer"),
                 this.ignoreHotbarInTransfer,
-                value -> this.ignoreHotbarInTransfer = value));
+                value -> {
+                    this.ignoreHotbarInTransfer = value;
+                    saveAndSyncConfig();
+                }));
 
         // Min slots for detection
         InventoryManagementConfig config = InventoryManagementConfig.getInstance();
@@ -222,6 +250,42 @@ public class InventorySettingsScreen extends Screen {
         } catch (NumberFormatException ignored) {}
         
         config.save();
+        
+        // Send config sync to server
+        ClientNetworking.sendConfigSync();
+    }
+    
+    private void saveAndSyncConfig() {
+        InventoryManagementConfig config = InventoryManagementConfig.getInstance();
+        config.sortingMode.set(this.currentSortingMode);
+        config.autoRefillEnabled.set(this.autoRefillEnabled);
+        config.autoRefillFromShulkers.set(this.autoRefillFromShulkers);
+        config.showSort.set(this.showSort);
+        config.showTransfer.set(this.showTransfer);
+        config.showStack.set(this.showStack);
+        config.showSettingsButton.set(this.showSettingsButton);
+        config.enableDynamicDetection.set(this.enableDynamicDetection);
+        config.ignoreHotbarInTransfer.set(this.ignoreHotbarInTransfer);
+        
+        // Parse and save numeric fields (these might not be valid yet)
+        try {
+            int minSlots = Integer.parseInt(this.minSlotsField.getValue());
+            if (minSlots >= 1 && minSlots <= 54) {
+                config.minSlotsForDetection.set(minSlots);
+            }
+        } catch (NumberFormatException ignored) {}
+        
+        try {
+            double threshold = Double.parseDouble(this.thresholdField.getValue());
+            if (threshold >= 0.0 && threshold <= 1.0) {
+                config.slotAcceptanceThreshold.set(threshold);
+            }
+        } catch (NumberFormatException ignored) {}
+        
+        config.save();
+        
+        // Send config sync to server immediately
+        ClientNetworking.sendConfigSync();
     }
     
     @Override

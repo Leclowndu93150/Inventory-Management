@@ -4,6 +4,9 @@ import com.leclowndu93150.inventorymanagement.InventoryManagementMod;
 import com.leclowndu93150.inventorymanagement.client.gui.InventoryManagementButton;
 import com.leclowndu93150.inventorymanagement.client.gui.screen.PerScreenPositionEditScreen;
 import com.leclowndu93150.inventorymanagement.client.network.ClientNetworking;
+import com.leclowndu93150.inventorymanagement.server.ServerPlayerConfigManager;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraft.server.level.ServerPlayer;
 import com.leclowndu93150.inventorymanagement.debug.DebugManager;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
@@ -164,6 +167,25 @@ public class InventoryManagementClientMod {
 
             ClientNetworking.sendSort(isPlayerInventory);
             event.setCanceled(true);
+        }
+        
+        @SubscribeEvent
+        public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+            // Send config sync when player joins server
+            if (event.getEntity().level().isClientSide) {
+                ClientNetworking.sendConfigSync();
+            }
+        }
+    }
+    
+    @Mod.EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+    public static class ServerEvents {
+        @SubscribeEvent
+        public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+            // Clean up server-side config when player disconnects
+            if (!event.getEntity().level().isClientSide && event.getEntity() instanceof ServerPlayer serverPlayer) {
+                ServerPlayerConfigManager.getInstance().removePlayerConfig(serverPlayer.getUUID());
+            }
         }
     }
 
