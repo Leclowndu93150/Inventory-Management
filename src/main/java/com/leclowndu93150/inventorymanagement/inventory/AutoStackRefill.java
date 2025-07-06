@@ -13,10 +13,9 @@ import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
-import net.minecraft.world.Container;
-import net.minecraft.world.ContainerHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 
 import java.util.*;
 
@@ -43,9 +42,18 @@ public class AutoStackRefill {
                     }
                     refill.player.getInventory().setChanged();
                     
-                    // FORCE FULL INVENTORY SYNC
                     if (refill.player instanceof ServerPlayer serverPlayer) {
                         serverPlayer.containerMenu.broadcastChanges();
+                        serverPlayer.inventoryMenu.broadcastChanges();
+
+                        int slotIndex = refill.hand == InteractionHand.MAIN_HAND ? 
+                            serverPlayer.getInventory().selected + 36 : 45;
+                        serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
+                            serverPlayer.inventoryMenu.containerId,
+                            serverPlayer.inventoryMenu.incrementStateId(),
+                            slotIndex,
+                            refill.stackToGive
+                        ));
                     }
                     
                     refill.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
@@ -64,9 +72,18 @@ public class AutoStackRefill {
                             slot.setCount(0);
                             check.player.getInventory().setChanged();
                             
-                            // FORCE FULL INVENTORY SYNC
                             if (check.player instanceof ServerPlayer serverPlayer) {
                                 serverPlayer.containerMenu.broadcastChanges();
+                                serverPlayer.inventoryMenu.broadcastChanges();
+
+                                int slotIndex = check.hand == InteractionHand.MAIN_HAND ? 
+                                    serverPlayer.getInventory().selected + 36 : 45;
+                                serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
+                                    serverPlayer.inventoryMenu.containerId,
+                                    serverPlayer.inventoryMenu.incrementStateId(),
+                                    slotIndex,
+                                    slot.copy()
+                                ));
                             }
                             
                             check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
@@ -120,9 +137,19 @@ public class AutoStackRefill {
                                     
                                     check.player.getInventory().setChanged();
                                     
-                                    // FORCE FULL INVENTORY SYNC
                                     if (check.player instanceof ServerPlayer serverPlayer) {
+
                                         serverPlayer.containerMenu.broadcastChanges();
+                                        serverPlayer.inventoryMenu.broadcastChanges();
+
+                                        int slotIndex = check.hand == InteractionHand.MAIN_HAND ? 
+                                            serverPlayer.getInventory().selected + 36 : 45;
+                                        serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
+                                            serverPlayer.inventoryMenu.containerId,
+                                            serverPlayer.inventoryMenu.incrementStateId(),
+                                            slotIndex,
+                                            slot.copy()
+                                        ));
                                     }
                                     
                                     check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
@@ -146,9 +173,18 @@ public class AutoStackRefill {
                                     
                                     check.player.getInventory().setChanged();
                                     
-                                    // FORCE FULL INVENTORY SYNC
                                     if (check.player instanceof ServerPlayer serverPlayer) {
                                         serverPlayer.containerMenu.broadcastChanges();
+                                        serverPlayer.inventoryMenu.broadcastChanges();
+
+                                        int slotIndex = check.hand == InteractionHand.MAIN_HAND ? 
+                                            serverPlayer.getInventory().selected + 36 : 45;
+                                        serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
+                                            serverPlayer.inventoryMenu.containerId,
+                                            serverPlayer.inventoryMenu.incrementStateId(),
+                                            slotIndex,
+                                            fromShulker
+                                        ));
                                     }
                                     
                                     check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
@@ -197,9 +233,9 @@ public class AutoStackRefill {
                 slot.setCount(0);
                 player.getInventory().setChanged();
                 
-                // FORCE FULL INVENTORY SYNC
                 if (player instanceof ServerPlayer serverPlayer) {
                     serverPlayer.containerMenu.broadcastChanges();
+                    serverPlayer.inventoryMenu.broadcastChanges();
                 }
                 
                 found = true;
@@ -244,9 +280,17 @@ public class AutoStackRefill {
                 slot.setCount(0);
                 player.getInventory().setChanged();
                 
-                // FORCE FULL INVENTORY SYNC
                 if (player instanceof ServerPlayer serverPlayer) {
                     serverPlayer.containerMenu.broadcastChanges();
+                    serverPlayer.inventoryMenu.broadcastChanges();
+
+                    int slotIndex = serverPlayer.getInventory().selected + 36;
+                    serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
+                        serverPlayer.inventoryMenu.containerId,
+                        serverPlayer.inventoryMenu.incrementStateId(),
+                        slotIndex,
+                        slot.copy()
+                    ));
                 }
                 
                 player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
@@ -262,9 +306,17 @@ public class AutoStackRefill {
                 player.setItemInHand(InteractionHand.MAIN_HAND, fromShulker);
                 player.getInventory().setChanged();
                 
-                // FORCE FULL INVENTORY SYNC
                 if (player instanceof ServerPlayer serverPlayer) {
                     serverPlayer.containerMenu.broadcastChanges();
+                    serverPlayer.inventoryMenu.broadcastChanges();
+
+                    int slotIndex = serverPlayer.getInventory().selected + 36;
+                    serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
+                        serverPlayer.inventoryMenu.containerId,
+                        serverPlayer.inventoryMenu.incrementStateId(),
+                        slotIndex,
+                        fromShulker
+                    ));
                 }
                 
                 player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
