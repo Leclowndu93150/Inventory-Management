@@ -26,6 +26,7 @@
   "inventorymanagement.settings.auto_refill": "Auto Stack Refill",
   "inventorymanagement.settings.auto_refill_shulkers": "Auto Refill from Shulker Boxes",
   "inventorymanagement.settings.mod_enabled": "Mod Enabled",
+  "inventorymanagement.settings.show_settings": "Show Settings Button",
   "inventorymanagement.settings.show_sort": "Show Sort Buttons",
   "inventorymanagement.settings.show_transfer": "Show Transfer Buttons",
   "inventorymanagement.settings.show_stack": "Show Auto Stack Buttons",

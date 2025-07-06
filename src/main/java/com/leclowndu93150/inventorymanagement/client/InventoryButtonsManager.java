@@ -231,7 +231,8 @@ public class InventoryButtonsManager {
     }
 
     private void generateSettingsButton(AbstractContainerScreen<?> screen, Consumer<GuiEventListener> addButton) {
-        if (!InventoryManagementConfig.getInstance().modEnabled.get()) {
+        if (!InventoryManagementConfig.getInstance().modEnabled.get() ||
+                !InventoryManagementConfig.getInstance().showSettingsButton.get()) {
             return;
         }
 

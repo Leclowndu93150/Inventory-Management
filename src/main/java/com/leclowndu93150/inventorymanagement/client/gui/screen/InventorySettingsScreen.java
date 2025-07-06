@@ -24,6 +24,7 @@ public class InventorySettingsScreen extends Screen {
     private boolean showSort;
     private boolean showTransfer;
     private boolean showStack;
+    private boolean showSettingsButton;
     private boolean enableDynamicDetection;
     private boolean ignoreHotbarInTransfer;
     private EditBox minSlotsField;
@@ -43,6 +44,7 @@ public class InventorySettingsScreen extends Screen {
         this.showSort = config.showSort.get();
         this.showTransfer = config.showTransfer.get();
         this.showStack = config.showStack.get();
+        this.showSettingsButton = config.showSettingsButton.get();
         this.enableDynamicDetection = config.enableDynamicDetection.get();
         this.ignoreHotbarInTransfer = config.ignoreHotbarInTransfer.get();
     }
@@ -58,6 +60,11 @@ public class InventorySettingsScreen extends Screen {
         this.addWidget(this.settingsList);
 
         // Button visibility toggles
+        this.settingsList.addEntry(new SettingsList.BooleanEntry(
+                Component.translatable("inventorymanagement.settings.show_settings"),
+                this.showSettingsButton,
+                value -> this.showSettingsButton = value));
+
         this.settingsList.addEntry(new SettingsList.BooleanEntry(
                 Component.translatable("inventorymanagement.settings.show_sort"),
                 this.showSort,
@@ -195,6 +202,7 @@ public class InventorySettingsScreen extends Screen {
         config.showSort.set(this.showSort);
         config.showTransfer.set(this.showTransfer);
         config.showStack.set(this.showStack);
+        config.showSettingsButton.set(this.showSettingsButton);
         config.enableDynamicDetection.set(this.enableDynamicDetection);
         config.ignoreHotbarInTransfer.set(this.ignoreHotbarInTransfer);
         
