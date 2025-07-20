@@ -8,6 +8,7 @@
   "inventorymanagement.keybind.transfer.from_container": "Transfer All from Container",
   "inventorymanagement.keybind.stack.to_player": "Auto Stack to Player",
   "inventorymanagement.keybind.stack.to_container": "Auto Stack to Container",
+  "inventorymanagement.keybind.settings_screen": "Open Inventory Management Settings",
 
   "inventorymanagement.button.sort_player": "Sort Player Inventory",
   "inventorymanagement.button.sort_container": "Sort Container",

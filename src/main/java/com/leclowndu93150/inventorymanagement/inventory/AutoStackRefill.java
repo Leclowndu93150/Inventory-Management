@@ -15,7 +15,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 
 import java.util.*;
 
@@ -24,46 +23,29 @@ public class AutoStackRefill {
     private static final List<QueuedFishingRod> checkFishingRodList = Collections.synchronizedList(new ArrayList<>());
     private static final List<QueuedItemCheck> checkItemUsedList = Collections.synchronizedList(new ArrayList<>());
 
-    public static void processTick() {
+    public static void processTick(boolean isClientSide) {
         try {
-            
             if (!addSingleList.isEmpty()) {
                 QueuedRefill refill = addSingleList.remove(0);
-                if (refill.player.isAlive()) {
+                if (refill != null && refill.player.isAlive()) {
                     ItemStack handStack = refill.player.getItemInHand(refill.hand).copy();
                     refill.player.setItemInHand(refill.hand, refill.stackToGive);
-                    
+
                     if (!handStack.isEmpty()) {
-                        
                         Inventory inv = refill.player.getInventory();
                         if (!inv.add(handStack)) {
                             refill.player.drop(handStack, false);
                         }
                     }
-                    refill.player.getInventory().setChanged();
-                    
-                    if (refill.player instanceof ServerPlayer serverPlayer) {
-                        serverPlayer.containerMenu.broadcastChanges();
-                        serverPlayer.inventoryMenu.broadcastChanges();
 
-                        int slotIndex = refill.hand == InteractionHand.MAIN_HAND ? 
-                            serverPlayer.getInventory().selected + 36 : 45;
-                        serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
-                            serverPlayer.inventoryMenu.containerId,
-                            serverPlayer.inventoryMenu.incrementStateId(),
-                            slotIndex,
-                            refill.stackToGive
-                        ));
-                    }
-                    
+                    refill.player.getInventory().setChanged();
                     refill.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                 }
             }
-            
-            
+
             if (!checkFishingRodList.isEmpty()) {
                 QueuedFishingRod check = checkFishingRodList.remove(0);
-                if (check.player.isAlive() && check.player.getItemInHand(check.hand).isEmpty()) {
+                if (check != null && check.player.isAlive() && check.player.getItemInHand(check.hand).isEmpty()) {
                     Inventory inv = check.player.getInventory();
                     for (int i = 35; i > 8; i--) {
                         ItemStack slot = inv.getItem(i);
@@ -71,34 +53,19 @@ public class AutoStackRefill {
                             check.player.setItemInHand(check.hand, slot.copy());
                             slot.setCount(0);
                             check.player.getInventory().setChanged();
-                            
-                            if (check.player instanceof ServerPlayer serverPlayer) {
-                                serverPlayer.containerMenu.broadcastChanges();
-                                serverPlayer.inventoryMenu.broadcastChanges();
-
-                                int slotIndex = check.hand == InteractionHand.MAIN_HAND ? 
-                                    serverPlayer.getInventory().selected + 36 : 45;
-                                serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
-                                    serverPlayer.inventoryMenu.containerId,
-                                    serverPlayer.inventoryMenu.incrementStateId(),
-                                    slotIndex,
-                                    slot.copy()
-                                ));
-                            }
-                            
                             check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                             break;
                         }
                     }
                 }
             }
-            
+
             if (!checkItemUsedList.isEmpty()) {
                 QueuedItemCheck check = checkItemUsedList.remove(0);
-                if (check.player.isAlive() && !check.player.isUsingItem()) {
+                if (check != null && check.player.isAlive() && !check.player.isUsingItem()) {
                     ItemStack usedStack = check.originalStack;
                     ItemStack handStack = check.player.getItemInHand(check.hand).copy();
-                    
+
                     if (!(usedStack.getItem().equals(handStack.getItem()) && usedStack.getCount() == handStack.getCount())) {
                         boolean shouldRefill = false;
                         if (handStack.getCount() <= 1) {
@@ -110,7 +77,7 @@ public class AutoStackRefill {
                                 shouldRefill = true;
                             }
                         }
-                        
+
                         if (shouldRefill) {
                             Item usedItem = usedStack.getItem();
                             Inventory inv = check.player.getInventory();
@@ -124,69 +91,36 @@ public class AutoStackRefill {
                                             continue;
                                         }
                                     }
-                                    
+
                                     check.player.setItemInHand(check.hand, slot.copy());
                                     slot.setCount(0);
-                                    
+
                                     if (!handStack.isEmpty()) {
-                                        Inventory playerInv = check.player.getInventory();
-                                        if (!playerInv.add(handStack)) {
+                                        if (!inv.add(handStack)) {
                                             check.player.drop(handStack, false);
                                         }
                                     }
-                                    
+
                                     check.player.getInventory().setChanged();
-                                    
-                                    if (check.player instanceof ServerPlayer serverPlayer) {
-
-                                        serverPlayer.containerMenu.broadcastChanges();
-                                        serverPlayer.inventoryMenu.broadcastChanges();
-
-                                        int slotIndex = check.hand == InteractionHand.MAIN_HAND ? 
-                                            serverPlayer.getInventory().selected + 36 : 45;
-                                        serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
-                                            serverPlayer.inventoryMenu.containerId,
-                                            serverPlayer.inventoryMenu.incrementStateId(),
-                                            slotIndex,
-                                            slot.copy()
-                                        ));
-                                    }
-                                    
                                     check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                                     found = true;
                                     break;
                                 }
                             }
-                            
-                            // If not found in regular inventory, check shulker boxes
+
                             if (!found) {
                                 ItemStack fromShulker = findInShulkerBoxes(check.player, usedItem, usedStack);
                                 if (!fromShulker.isEmpty()) {
                                     check.player.setItemInHand(check.hand, fromShulker);
-                                    
+
                                     if (!handStack.isEmpty()) {
                                         Inventory playerInv = check.player.getInventory();
                                         if (!playerInv.add(handStack)) {
                                             check.player.drop(handStack, false);
                                         }
                                     }
-                                    
-                                    check.player.getInventory().setChanged();
-                                    
-                                    if (check.player instanceof ServerPlayer serverPlayer) {
-                                        serverPlayer.containerMenu.broadcastChanges();
-                                        serverPlayer.inventoryMenu.broadcastChanges();
 
-                                        int slotIndex = check.hand == InteractionHand.MAIN_HAND ? 
-                                            serverPlayer.getInventory().selected + 36 : 45;
-                                        serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
-                                            serverPlayer.inventoryMenu.containerId,
-                                            serverPlayer.inventoryMenu.incrementStateId(),
-                                            slotIndex,
-                                            fromShulker
-                                        ));
-                                    }
-                                    
+                                    check.player.getInventory().setChanged();
                                     check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                                 }
                             }
@@ -232,18 +166,11 @@ public class AutoStackRefill {
                 addSingleList.add(new QueuedRefill(player, slot.copy(), hand));
                 slot.setCount(0);
                 player.getInventory().setChanged();
-                
-                if (player instanceof ServerPlayer serverPlayer) {
-                    serverPlayer.containerMenu.broadcastChanges();
-                    serverPlayer.inventoryMenu.broadcastChanges();
-                }
-                
                 found = true;
                 break;
             }
         }
-        
-        // If not found in regular inventory, check shulker boxes
+
         if (!found) {
             ItemStack fromShulker = findInShulkerBoxes(player, usedItem, used);
             if (!fromShulker.isEmpty()) {
@@ -279,46 +206,17 @@ public class AutoStackRefill {
                 player.setItemInHand(InteractionHand.MAIN_HAND, slot.copy());
                 slot.setCount(0);
                 player.getInventory().setChanged();
-                
-                if (player instanceof ServerPlayer serverPlayer) {
-                    serverPlayer.containerMenu.broadcastChanges();
-                    serverPlayer.inventoryMenu.broadcastChanges();
-
-                    int slotIndex = serverPlayer.getInventory().selected + 36;
-                    serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
-                        serverPlayer.inventoryMenu.containerId,
-                        serverPlayer.inventoryMenu.incrementStateId(),
-                        slotIndex,
-                        slot.copy()
-                    ));
-                }
-                
                 player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                 found = true;
                 break;
             }
         }
-        
-        // If not found in regular inventory, check shulker boxes
+
         if (!found) {
             ItemStack fromShulker = findInShulkerBoxes(player, tossedItem, tossedStack);
             if (!fromShulker.isEmpty()) {
                 player.setItemInHand(InteractionHand.MAIN_HAND, fromShulker);
                 player.getInventory().setChanged();
-                
-                if (player instanceof ServerPlayer serverPlayer) {
-                    serverPlayer.containerMenu.broadcastChanges();
-                    serverPlayer.inventoryMenu.broadcastChanges();
-
-                    int slotIndex = serverPlayer.getInventory().selected + 36;
-                    serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
-                        serverPlayer.inventoryMenu.containerId,
-                        serverPlayer.inventoryMenu.incrementStateId(),
-                        slotIndex,
-                        fromShulker
-                    ));
-                }
-                
                 player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
             }
         }
@@ -364,42 +262,35 @@ public class AutoStackRefill {
         if (player.isCreative()) {
             return false;
         }
-        
-        // On server side, use per-player config
+
         if (player instanceof ServerPlayer serverPlayer) {
-            ServerPlayerConfigManager.PlayerConfigData config = 
+            ServerPlayerConfigManager.PlayerConfigData config =
                     ServerPlayerConfigManager.getInstance().getPlayerConfig(serverPlayer);
             return config.isAutoRefillEnabled();
         }
-        
-        // On client side, use client config (fallback, shouldn't happen on server)
+
         try {
             return InventoryManagementConfig.getInstance().autoRefillEnabled.get();
         } catch (Exception e) {
-            // Config not loaded, default to false
             return false;
         }
     }
 
     private static ItemStack findInShulkerBoxes(Player player, Item targetItem, ItemStack originalStack) {
-        // Check if auto refill from shulkers is enabled
         boolean autoRefillFromShulkers = false;
-        
-        // On server side, use per-player config
+
         if (player instanceof ServerPlayer serverPlayer) {
-            ServerPlayerConfigManager.PlayerConfigData config = 
+            ServerPlayerConfigManager.PlayerConfigData config =
                     ServerPlayerConfigManager.getInstance().getPlayerConfig(serverPlayer);
             autoRefillFromShulkers = config.isAutoRefillFromShulkers();
         } else {
-            // On client side, use client config (fallback, shouldn't happen on server)
             try {
                 autoRefillFromShulkers = InventoryManagementConfig.getInstance().autoRefillFromShulkers.get();
             } catch (Exception e) {
-                // Config not loaded, default to false
                 autoRefillFromShulkers = false;
             }
         }
-        
+
         if (!autoRefillFromShulkers) {
             return ItemStack.EMPTY;
         }
@@ -407,27 +298,26 @@ public class AutoStackRefill {
         Inventory inv = player.getInventory();
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack stack = inv.getItem(i);
-            if (stack.getItem() instanceof BlockItem blockItem && 
-                blockItem.getBlock() instanceof ShulkerBoxBlock) {
-                
+            if (stack.getItem() instanceof BlockItem blockItem &&
+                    blockItem.getBlock() instanceof ShulkerBoxBlock) {
+
                 CompoundTag tag = stack.getTag();
                 if (tag != null && tag.contains("BlockEntityTag")) {
                     CompoundTag blockEntityTag = tag.getCompound("BlockEntityTag");
                     if (blockEntityTag.contains("Items")) {
                         ListTag items = blockEntityTag.getList("Items", 10);
-                        
+
                         for (int j = 0; j < items.size(); j++) {
                             CompoundTag itemTag = items.getCompound(j);
                             ItemStack itemInBox = ItemStack.of(itemTag);
-                            
+
                             if (itemInBox.getItem().equals(targetItem)) {
                                 if (targetItem instanceof PotionItem && originalStack != null) {
                                     if (!PotionUtils.getPotion(originalStack).equals(PotionUtils.getPotion(itemInBox))) {
                                         continue;
                                     }
                                 }
-                                
-                                // Remove the item from the shulker box
+
                                 items.remove(j);
                                 if (items.isEmpty()) {
                                     blockEntityTag.remove("Items");
@@ -435,7 +325,7 @@ public class AutoStackRefill {
                                         tag.remove("BlockEntityTag");
                                     }
                                 }
-                                
+
                                 return itemInBox;
                             }
                         }
@@ -443,7 +333,7 @@ public class AutoStackRefill {
                 }
             }
         }
-        
+
         return ItemStack.EMPTY;
     }
 

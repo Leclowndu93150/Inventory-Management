@@ -2,9 +2,11 @@ package com.leclowndu93150.inventorymanagement.client;
 
 import com.leclowndu93150.inventorymanagement.InventoryManagementMod;
 import com.leclowndu93150.inventorymanagement.client.gui.InventoryManagementButton;
+import com.leclowndu93150.inventorymanagement.client.gui.screen.InventorySettingsScreen;
 import com.leclowndu93150.inventorymanagement.client.gui.screen.PerScreenPositionEditScreen;
 import com.leclowndu93150.inventorymanagement.client.network.ClientNetworking;
 import com.leclowndu93150.inventorymanagement.server.ServerPlayerConfigManager;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraft.server.level.ServerPlayer;
 import com.leclowndu93150.inventorymanagement.debug.DebugManager;
@@ -26,17 +28,17 @@ import org.lwjgl.glfw.GLFW;
 
 @Mod.EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class InventoryManagementClientMod {
-    public static final Lazy<KeyMapping> POSITION_EDIT_PLAYER = Lazy.of(() -> new KeyMapping(
-            "inventorymanagement.keybind.position_edit.player",
-            GLFW.GLFW_KEY_K,
-            "inventorymanagement.keybind.category"
-    ));
-
-    public static final Lazy<KeyMapping> POSITION_EDIT_CONTAINER = Lazy.of(() -> new KeyMapping(
-            "inventorymanagement.keybind.position_edit.container",
-            GLFW.GLFW_KEY_L,
-            "inventorymanagement.keybind.category"
-    ));
+//    public static final Lazy<KeyMapping> POSITION_EDIT_PLAYER = Lazy.of(() -> new KeyMapping(
+//            "inventorymanagement.keybind.position_edit.player",
+//            GLFW.GLFW_KEY_K,
+//            "inventorymanagement.keybind.category"
+//    ));
+//
+//    public static final Lazy<KeyMapping> POSITION_EDIT_CONTAINER = Lazy.of(() -> new KeyMapping(
+//            "inventorymanagement.keybind.position_edit.container",
+//            GLFW.GLFW_KEY_L,
+//            "inventorymanagement.keybind.category"
+//    ));
 
     public static final Lazy<KeyMapping> SORT_PLAYER = Lazy.of(() -> new KeyMapping(
             "inventorymanagement.keybind.sort.player",
@@ -81,10 +83,16 @@ public class InventoryManagementClientMod {
             "inventorymanagement.keybind.category"
     ));
 
+    public static final Lazy<KeyMapping> SETTINGS_SCREEN = Lazy.of(() -> new KeyMapping(
+            "inventorymanagement.keybind.settings_screen",
+            GLFW.GLFW_KEY_UNKNOWN,
+            "inventorymanagement.keybind.category"
+    ));
+
     @SubscribeEvent
     public static void registerKeys(RegisterKeyMappingsEvent event) {
-        event.register(POSITION_EDIT_PLAYER.get());
-        event.register(POSITION_EDIT_CONTAINER.get());
+//        event.register(POSITION_EDIT_PLAYER.get());
+//        event.register(POSITION_EDIT_CONTAINER.get());
         event.register(SORT_PLAYER.get());
         event.register(SORT_CONTAINER.get());
         event.register(TRANSFER_TO_CONTAINER.get());
@@ -92,6 +100,7 @@ public class InventoryManagementClientMod {
         event.register(STACK_TO_PLAYER.get());
         event.register(STACK_TO_CONTAINER.get());
         event.register(SORT_HOVERED.get());
+        event.register(SETTINGS_SCREEN.get());
     }
 
     @Mod.EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
@@ -113,13 +122,7 @@ public class InventoryManagementClientMod {
                     .anyMatch(child -> child instanceof InventoryManagementButton);
             if (!hasButtons) return;
 
-            if (POSITION_EDIT_PLAYER.get().matches(event.getKeyCode(), event.getScanCode())) {
-                Minecraft.getInstance().setScreen(new PerScreenPositionEditScreen(screen, true));
-                event.setCanceled(true);
-            } else if (POSITION_EDIT_CONTAINER.get().matches(event.getKeyCode(), event.getScanCode())) {
-                Minecraft.getInstance().setScreen(new PerScreenPositionEditScreen(screen, false));
-                event.setCanceled(true);
-            } else if (SORT_PLAYER.get().matches(event.getKeyCode(), event.getScanCode())) {
+            if (SORT_PLAYER.get().matches(event.getKeyCode(), event.getScanCode())) {
                 ClientNetworking.sendSort(true);
                 playClickSound();
                 event.setCanceled(true);
@@ -143,6 +146,21 @@ public class InventoryManagementClientMod {
                 ClientNetworking.sendStack(false);
                 playClickSound();
                 event.setCanceled(true);
+            }
+        }
+
+        @SubscribeEvent
+        public static void onKeyInput(InputEvent.Key event) {
+            if (Minecraft.getInstance().screen == null) return;
+
+//            if (POSITION_EDIT_PLAYER.get().matches(event.getKey(), event.getScanCode())) {
+//                Minecraft.getInstance().setScreen(new PerScreenPositionEditScreen(Minecraft.getInstance().screen, true));
+//            } else if (POSITION_EDIT_CONTAINER.get().matches(event.getKey(), event.getScanCode())) {
+//                Minecraft.getInstance().setScreen(new PerScreenPositionEditScreen(Minecraft.getInstance().screen, false));
+//            }
+
+            if (SETTINGS_SCREEN.get().matches(event.getKey(), event.getScanCode())) {
+                Minecraft.getInstance().setScreen(new InventorySettingsScreen(Minecraft.getInstance().screen));
             }
         }
 

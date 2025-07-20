@@ -6,9 +6,13 @@ import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
 import com.leclowndu93150.inventorymanagement.debug.DebugCommand;
 import com.leclowndu93150.inventorymanagement.events.AutoRefillEvents;
 import com.leclowndu93150.inventorymanagement.network.Networking;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
@@ -83,6 +87,5 @@ public final class InventoryManagementMod {
     private void onConfigReloaded(ModConfigEvent.Reloading event) {
         InventoryManagementConfig.getInstance().loadCompatibilityOverrides();
     }
-
 
 }
