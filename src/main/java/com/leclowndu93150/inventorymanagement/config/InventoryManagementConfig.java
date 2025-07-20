@@ -31,6 +31,7 @@ public class InventoryManagementConfig {
     public final ModConfigSpec.BooleanValue showSort;
     public final ModConfigSpec.BooleanValue showTransfer;
     public final ModConfigSpec.BooleanValue showStack;
+    public final ModConfigSpec.BooleanValue showSettingsButton;
     public final ModConfigSpec.IntValue defaultOffsetX;
     public final ModConfigSpec.IntValue defaultOffsetY;
     public final ModConfigSpec.EnumValue<SortingMode> sortingMode;
@@ -71,6 +72,10 @@ public class InventoryManagementConfig {
         showStack = builder
                 .comment("Whether to show auto-stack buttons in the UI.")
                 .define("showStack", true);
+
+        showSettingsButton = builder
+                .comment("Whether to show the settings button in the UI.")
+                .define("showSettingsButton", true);
 
         builder.push("position");
 

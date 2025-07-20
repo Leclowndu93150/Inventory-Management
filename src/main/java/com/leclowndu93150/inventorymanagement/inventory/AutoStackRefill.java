@@ -1,8 +1,10 @@
 package com.leclowndu93150.inventorymanagement.inventory;
 
 import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
+import com.leclowndu93150.inventorymanagement.server.ServerPlayerConfigManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
@@ -20,7 +22,7 @@ public class AutoStackRefill {
     private static final List<QueuedFishingRod> checkFishingRodList = Collections.synchronizedList(new ArrayList<>());
     private static final List<QueuedItemCheck> checkItemUsedList = Collections.synchronizedList(new ArrayList<>());
 
-    public static void processTick() {
+    public static void processTick(boolean isClientSide) {
         try {
 
             if (!addSingleList.isEmpty()) {
@@ -262,11 +264,39 @@ public class AutoStackRefill {
     }
 
     private static boolean shouldRefill(Player player) {
-        return !player.isCreative() && InventoryManagementConfig.getInstance().autoRefillEnabled.get();
+        if (player.isCreative()) {
+            return false;
+        }
+
+        if (player instanceof ServerPlayer serverPlayer) {
+            ServerPlayerConfigManager.PlayerConfigData config =
+                    ServerPlayerConfigManager.getInstance().getPlayerConfig(serverPlayer);
+            return config.isAutoRefillEnabled();
+        }
+
+        try {
+            return InventoryManagementConfig.getInstance().autoRefillEnabled.get();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static ItemStack findInShulkerBoxes(Player player, Item targetItem, ItemStack originalStack) {
-        if (!InventoryManagementConfig.getInstance().autoRefillFromShulkers.get()) {
+        boolean autoRefillFromShulkers = false;
+
+        if (player instanceof ServerPlayer serverPlayer) {
+            ServerPlayerConfigManager.PlayerConfigData config =
+                    ServerPlayerConfigManager.getInstance().getPlayerConfig(serverPlayer);
+            autoRefillFromShulkers = config.isAutoRefillFromShulkers();
+        } else {
+            try {
+                autoRefillFromShulkers = InventoryManagementConfig.getInstance().autoRefillFromShulkers.get();
+            } catch (Exception e) {
+                autoRefillFromShulkers = false;
+            }
+        }
+
+        if (!autoRefillFromShulkers) {
             return ItemStack.EMPTY;
         }
 

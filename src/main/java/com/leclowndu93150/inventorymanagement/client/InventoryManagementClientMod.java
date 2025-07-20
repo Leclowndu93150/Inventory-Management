@@ -2,23 +2,28 @@ package com.leclowndu93150.inventorymanagement.client;
 
 import com.leclowndu93150.inventorymanagement.InventoryManagementMod;
 import com.leclowndu93150.inventorymanagement.client.gui.InventoryManagementButton;
+import com.leclowndu93150.inventorymanagement.client.gui.screen.InventorySettingsScreen;
 import com.leclowndu93150.inventorymanagement.client.gui.screen.PerScreenPositionEditScreen;
 import com.leclowndu93150.inventorymanagement.client.network.ClientNetworking;
+import com.leclowndu93150.inventorymanagement.server.ServerPlayerConfigManager;
 import com.leclowndu93150.inventorymanagement.debug.DebugManager;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.util.Lazy;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import org.lwjgl.glfw.GLFW;
 
 @EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, value = Dist.CLIENT)
@@ -78,6 +83,12 @@ public class InventoryManagementClientMod {
             "inventorymanagement.keybind.category"
     ));
 
+    public static final Lazy<KeyMapping> SETTINGS_SCREEN = Lazy.of(() -> new KeyMapping(
+            "inventorymanagement.keybind.settings_screen",
+            GLFW.GLFW_KEY_UNKNOWN,
+            "inventorymanagement.keybind.category"
+    ));
+
     @SubscribeEvent
     public static void registerKeys(RegisterKeyMappingsEvent event) {
         event.register(POSITION_EDIT_PLAYER.get());
@@ -89,6 +100,7 @@ public class InventoryManagementClientMod {
         event.register(STACK_TO_PLAYER.get());
         event.register(STACK_TO_CONTAINER.get());
         event.register(SORT_HOVERED.get());
+        event.register(SETTINGS_SCREEN.get());
     }
 
     @EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, value = Dist.CLIENT)
@@ -164,6 +176,23 @@ public class InventoryManagementClientMod {
             ClientNetworking.sendSort(isPlayerInventory);
             event.setCanceled(true);
         }
+
+        @SubscribeEvent
+        public static void onKeyInput(InputEvent.Key event) {
+            if (Minecraft.getInstance().screen == null) return;
+
+            if (SETTINGS_SCREEN.get().matches(event.getKey(), event.getScanCode())) {
+                Minecraft.getInstance().setScreen(new InventorySettingsScreen(Minecraft.getInstance().screen));
+            }
+        }
+        
+        @SubscribeEvent
+        public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+            // Send config sync when player joins server
+            if (event.getEntity().level().isClientSide) {
+                ClientNetworking.sendConfigSync();
+            }
+        }
     }
 
     public static void playClickSound(){
@@ -178,6 +207,17 @@ public class InventoryManagementClientMod {
         if (event.getScreen() instanceof AbstractContainerScreen<?> containerScreen) {
             DebugManager.onScreenOpen(containerScreen);
             InventoryButtonsManager.INSTANCE.init(containerScreen, event::addListener);
+        }
+    }
+}
+
+@EventBusSubscriber(modid = InventoryManagementMod.MOD_ID)
+class ServerEvents {
+    @SubscribeEvent
+    public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        // Clean up server-side config when player disconnects
+        if (!event.getEntity().level().isClientSide && event.getEntity() instanceof ServerPlayer serverPlayer) {
+            ServerPlayerConfigManager.getInstance().removePlayerConfig(serverPlayer.getUUID());
         }
     }
 }

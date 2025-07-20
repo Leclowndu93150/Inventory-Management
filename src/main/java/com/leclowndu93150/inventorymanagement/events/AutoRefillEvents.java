@@ -8,7 +8,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerDestroyItemEvent;
@@ -24,12 +27,17 @@ public class AutoRefillEvents {
     
     public static void register() {
         NeoForge.EVENT_BUS.register(AutoRefillEvents.class);
+
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            NeoForge.EVENT_BUS.register(ClientEvents.class);
+        }
+
         InventoryManagementMod.LOGGER.info("AutoRefillEvents registered");
     }
     
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Pre event) {
-        AutoStackRefill.processTick();
+        AutoStackRefill.processTick(false);
     }
     
     @SubscribeEvent
@@ -100,5 +108,12 @@ public class AutoRefillEvents {
         InteractionHand hand = event.getHand();
         
         AutoStackRefill.onBlockRightClick(event.getLevel(), player, hand, event.getPos(), event.getHitVec());
+    }
+
+    public static class ClientEvents {
+        @SubscribeEvent
+        public static void onClientTick(ClientTickEvent.Pre event) {
+            AutoStackRefill.processTick(true);
+        }
     }
 }

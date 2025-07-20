@@ -4,6 +4,8 @@ import com.leclowndu93150.inventorymanagement.compat.ContainerAnalyzer;
 import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
 import com.leclowndu93150.inventorymanagement.config.SortingMode;
 import com.leclowndu93150.inventorymanagement.inventory.sorting.ItemStackComparator;
+import com.leclowndu93150.inventorymanagement.server.ServerPlayerConfigManager;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -23,7 +25,7 @@ public class InventoryHelper {
         Container inventory = isPlayerInventory || containerInventory == null ? player.getInventory() : containerInventory;
 
         if (inventory instanceof Inventory) {
-            sortInventory(inventory, SlotRange.playerMainRange());
+            sortInventory(inventory, SlotRange.playerMainRange(), player);
         } else {
             AbstractContainerMenu menu = player.containerMenu;
             ContainerAnalyzer.ContainerInfo info = ContainerAnalyzer.analyzeMenu(menu).get(inventory);
@@ -39,7 +41,7 @@ public class InventoryHelper {
                     }
                 }
 
-                List<ItemStack> sortedStacks = mergeAndSortStacks(stacks);
+                List<ItemStack> sortedStacks = mergeAndSortStacks(stacks, player);
 
                 // Clear original slots
                 for (Slot slot : info.getSlots()) {
@@ -60,12 +62,12 @@ public class InventoryHelper {
                     }
                 }
             } else {
-                sortInventory(inventory);
+                sortInventory(inventory, player);
             }
         }
     }
 
-    private static List<ItemStack> mergeAndSortStacks(List<ItemStack> stacks) {
+    private static List<ItemStack> mergeAndSortStacks(List<ItemStack> stacks, Player player) {
         List<ItemStack> cleanedStacks = stacks.stream()
                 .filter(itemStack -> !itemStack.isEmpty())
                 .map(ItemStack::copy)
@@ -87,7 +89,19 @@ public class InventoryHelper {
             }
         }
 
-        SortingMode sortingMode = InventoryManagementConfig.getInstance().sortingMode.get();
+        // Get sorting mode from per-player config on server, fallback to client config
+        SortingMode sortingMode;
+        if (player instanceof ServerPlayer serverPlayer) {
+            ServerPlayerConfigManager.PlayerConfigData config = 
+                    ServerPlayerConfigManager.getInstance().getPlayerConfig(serverPlayer);
+            sortingMode = config.getSortingMode();
+        } else {
+            try {
+                sortingMode = InventoryManagementConfig.getInstance().sortingMode.get();
+            } catch (Exception e) {
+                sortingMode = SortingMode.ALPHABETICAL; // Default fallback
+            }
+        }
         List<ItemStack> nonEmptyStacks = cleanedStacks.stream()
                 .filter(itemStack -> !itemStack.isEmpty())
                 .collect(Collectors.toList());
@@ -97,22 +111,22 @@ public class InventoryHelper {
                 .collect(Collectors.toList());
     }
 
-    private static void sortInventory(Container inventory) {
-        sortInventory(inventory, 0, inventory.getContainerSize());
+    private static void sortInventory(Container inventory, Player player) {
+        sortInventory(inventory, 0, inventory.getContainerSize(), player);
     }
 
-    private static void sortInventory(Container inventory, int start, int end) {
-        sortInventory(inventory, new SlotRange(start, end));
+    private static void sortInventory(Container inventory, int start, int end, Player player) {
+        sortInventory(inventory, new SlotRange(start, end), player);
     }
 
-    private static void sortInventory(Container inventory, SlotRange slotRange) {
+    private static void sortInventory(Container inventory, SlotRange slotRange, Player player) {
         List<ItemStack> stacks = new ArrayList<>();
 
         for (int i = slotRange.min; i < slotRange.max; i++) {
             stacks.add(inventory.getItem(i).copy());
         }
 
-        List<ItemStack> sortedStacks = mergeAndSortStacks(stacks);
+        List<ItemStack> sortedStacks = mergeAndSortStacks(stacks, player);
 
         for (int i = slotRange.min; i < slotRange.max; i++) {
             int j = i - slotRange.min;
@@ -149,8 +163,21 @@ public class InventoryHelper {
         ContainerAnalyzer.ContainerInfo containerInfo = ContainerAnalyzer.getContainerInventoryInfo(menu);
 
         if (playerInfo == null || containerInfo == null) {
-            SlotRange playerSlotRange = InventoryManagementConfig.getInstance().ignoreHotbarInTransfer.get() 
-                    ? SlotRange.playerMainRange() : SlotRange.playerFullRange();
+            // Get ignore hotbar setting from per-player config
+            boolean ignoreHotbar;
+            if (player instanceof ServerPlayer serverPlayer) {
+                ServerPlayerConfigManager.PlayerConfigData config = 
+                        ServerPlayerConfigManager.getInstance().getPlayerConfig(serverPlayer);
+                ignoreHotbar = config.isIgnoreHotbarInTransfer();
+            } else {
+                try {
+                    ignoreHotbar = InventoryManagementConfig.getInstance().ignoreHotbarInTransfer.get();
+                } catch (Exception e) {
+                    ignoreHotbar = true; // Default fallback
+                }
+            }
+            
+            SlotRange playerSlotRange = ignoreHotbar ? SlotRange.playerMainRange() : SlotRange.playerFullRange();
             SlotRange containerSlotRange = SlotRange.fullRange(containerInventory);
 
             if (player.containerMenu instanceof HorseInventoryMenu) {
@@ -167,7 +194,22 @@ public class InventoryHelper {
         } else {
             if (fromPlayerInventory) {
                 List<Slot> playerSlots = playerInfo.getSlots();
-                if (InventoryManagementConfig.getInstance().ignoreHotbarInTransfer.get()) {
+                
+                // Get ignore hotbar setting from per-player config
+                boolean ignoreHotbar;
+                if (player instanceof ServerPlayer serverPlayer) {
+                    ServerPlayerConfigManager.PlayerConfigData config = 
+                            ServerPlayerConfigManager.getInstance().getPlayerConfig(serverPlayer);
+                    ignoreHotbar = config.isIgnoreHotbarInTransfer();
+                } else {
+                    try {
+                        ignoreHotbar = InventoryManagementConfig.getInstance().ignoreHotbarInTransfer.get();
+                    } catch (Exception e) {
+                        ignoreHotbar = true; // Default fallback
+                    }
+                }
+                
+                if (ignoreHotbar) {
                     playerSlots = playerSlots.stream()
                             .filter(slot -> slot.getSlotIndex() >= 9) // Only main inventory, not hotbar
                             .collect(Collectors.toList());

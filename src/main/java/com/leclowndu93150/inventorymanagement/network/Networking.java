@@ -1,6 +1,7 @@
 package com.leclowndu93150.inventorymanagement.network;
 
 import com.leclowndu93150.inventorymanagement.InventoryManagementMod;
+import com.leclowndu93150.inventorymanagement.config.SortingMode;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -41,6 +42,13 @@ public final class Networking {
                         ServerNetworking.handleTransfer(payload, context))
         );
 
+        registrar.playToServer(
+                PlayerConfigSyncC2S.TYPE,
+                PlayerConfigSyncC2S.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() ->
+                        ServerNetworking.handlePlayerConfigSync(payload, context))
+        );
+
     }
 
     public record StackC2S(boolean fromPlayerInventory) implements CustomPacketPayload {
@@ -75,6 +83,65 @@ public final class Networking {
                 ByteBufCodecs.BOOL, TransferC2S::fromPlayerInventory,
                 TransferC2S::new
         );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record PlayerConfigSyncC2S(
+            boolean modEnabled,
+            boolean showSort,
+            boolean showTransfer,
+            boolean showStack,
+            boolean showSettingsButton,
+            SortingMode sortingMode,
+            boolean autoRefillEnabled,
+            boolean autoRefillFromShulkers,
+            boolean ignoreHotbarInTransfer,
+            boolean enableDynamicDetection,
+            int minSlotsForDetection,
+            double slotAcceptanceThreshold
+    ) implements CustomPacketPayload {
+        public static final Type<PlayerConfigSyncC2S> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(InventoryManagementMod.MOD_ID, "player_config_sync_c2s"));
+        
+        public static final StreamCodec<FriendlyByteBuf, PlayerConfigSyncC2S> STREAM_CODEC = StreamCodec.of(
+                PlayerConfigSyncC2S::encode,
+                PlayerConfigSyncC2S::decode
+        );
+
+        private static void encode(FriendlyByteBuf buf, PlayerConfigSyncC2S packet) {
+            buf.writeBoolean(packet.modEnabled);
+            buf.writeBoolean(packet.showSort);
+            buf.writeBoolean(packet.showTransfer);
+            buf.writeBoolean(packet.showStack);
+            buf.writeBoolean(packet.showSettingsButton);
+            buf.writeEnum(packet.sortingMode);
+            buf.writeBoolean(packet.autoRefillEnabled);
+            buf.writeBoolean(packet.autoRefillFromShulkers);
+            buf.writeBoolean(packet.ignoreHotbarInTransfer);
+            buf.writeBoolean(packet.enableDynamicDetection);
+            buf.writeVarInt(packet.minSlotsForDetection);
+            buf.writeDouble(packet.slotAcceptanceThreshold);
+        }
+
+        private static PlayerConfigSyncC2S decode(FriendlyByteBuf buf) {
+            return new PlayerConfigSyncC2S(
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readEnum(SortingMode.class),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readVarInt(),
+                    buf.readDouble()
+            );
+        }
 
         @Override
         public Type<? extends CustomPacketPayload> type() {
