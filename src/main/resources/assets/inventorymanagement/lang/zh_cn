@@ -1,0 +1,43 @@
+{
+  "inventorymanagement.keybind.category": "库存管理",
+  "inventorymanagement.keybind.position_edit.player": "编辑玩家背包按钮位置",
+  "inventorymanagement.keybind.position_edit.container": "编辑容器按钮位置",
+  "inventorymanagement.keybind.sort.player": "对玩家物品栏进行排序",
+  "inventorymanagement.keybind.sort.container": "排序容器",
+  "inventorymanagement.keybind.transfer.to_container": "全部传输到容器",
+  "inventorymanagement.keybind.transfer.from_container": "从容器传输全部",
+  "inventorymanagement.keybind.stack.to_player": "自动堆叠到玩家背包",
+  "inventorymanagement.keybind.stack.to_container": "自动堆叠到容器",
+
+  "inventorymanagement.button.sort_player": "对玩家物品栏进行排序",
+  "inventorymanagement.button.sort_container": "排序容器",
+  "inventorymanagement.button.transfer_place": "全部传输到容器",
+  "inventorymanagement.button.transfer_take": "从容器传输全部",
+  "inventorymanagement.button.autostack_into": "自动堆叠到玩家背包",
+  "inventorymanagement.button.autostack_from": "自动堆叠到容器",
+  "inventorymanagement.button.reset": "重置",
+  "inventorymanagement.button.settings": "设置",
+
+  "inventorymanagement.position_edit.title": "编辑按钮位置",
+  "inventorymanagement.default_position_edit.title": "编辑默认按钮位置",
+  
+  "inventorymanagement.settings.title": "库存管理设置",
+  "inventorymanagement.settings.sort_mode": "排序模式",
+  "inventorymanagement.settings.auto_refill": "自动堆栈填充",
+  "inventorymanagement.settings.auto_refill_shulkers": "从潜影盒自动补充",
+  "inventorymanagement.settings.mod_enabled": "Mod 已启用",
+  "inventorymanagement.settings.show_sort": "显示排序按钮",
+  "inventorymanagement.settings.show_transfer": "显示传输按钮",
+  "inventorymanagement.settings.show_stack": "显示堆栈按钮",
+  "inventorymanagement.settings.dynamic_detection": "动态容器检测",
+  "inventorymanagement.settings.ignore_hotbar_transfer": "在[全部传输]中忽略热键栏",
+  "inventorymanagement.settings.min_slots": "用于检测的最小插槽",
+  "inventorymanagement.settings.min_slots.tooltip": "将容器视为存储所需的最小槽数 （1-54）",
+  "inventorymanagement.settings.threshold": "插槽接受阈值",
+  "inventorymanagement.settings.threshold.tooltip": "必须接受常见项目才能进行动态检测的槽位百分比 （0.0-1.0）",
+  "inventorymanagement.sorting.alphabetical": "按字母顺序",
+  "inventorymanagement.sorting.amount": "按数量排序",
+  "inventorymanagement.sorting.mod_id": "按物品ID",
+  
+  "inventorymanagement.keybind.sort.hovered": "对悬停容器进行排序"
+}
