@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.leclowndu93150.inventorymanagement.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "inventory_management.refmap.json",
+  "mixins": [
+  ],
+  "client": [
+    "AbstractContainerScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
