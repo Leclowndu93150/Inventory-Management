@@ -1,31 +1,22 @@
 package com.leclowndu93150.inventorymanagement;
 
 import com.leclowndu93150.inventorymanagement.api.InventoryManagementAPI;
-import com.leclowndu93150.inventorymanagement.client.ClientBlockTracker;
+import com.leclowndu93150.inventorymanagement.client.ClientSetup;
 import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
 import com.leclowndu93150.inventorymanagement.debug.DebugCommand;
 import com.leclowndu93150.inventorymanagement.events.AutoRefillEvents;
 import com.leclowndu93150.inventorymanagement.network.Networking;
-import com.leclowndu93150.inventorymanagement.client.gui.screen.InventorySettingsScreen;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.fml.loading.FMLEnvironment;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -41,10 +32,7 @@ public final class InventoryManagementMod {
         modEventBus.addListener(this::onConfigLoaded);
         modEventBus.addListener(this::onConfigReloaded);
         MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
-        if (FMLEnvironment.dist == Dist.CLIENT) {
-            MinecraftForge.EVENT_BUS.register(ClientBlockTracker.class);
-            MinecraftForge.registerConfigScreen((parent) -> new InventorySettingsScreen(parent));
-        }
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> ClientSetup::init);
         Networking.register();
         AutoRefillEvents.register();
     }

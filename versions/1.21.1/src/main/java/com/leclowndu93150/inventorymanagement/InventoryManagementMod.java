@@ -1,21 +1,16 @@
 package com.leclowndu93150.inventorymanagement;
 
 import com.leclowndu93150.inventorymanagement.api.InventoryManagementAPI;
-import com.leclowndu93150.inventorymanagement.client.ClientBlockTracker;
 import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
 import com.leclowndu93150.inventorymanagement.debug.DebugCommand;
 import com.leclowndu93150.inventorymanagement.events.AutoRefillEvents;
 import com.leclowndu93150.inventorymanagement.network.Networking;
-import com.leclowndu93150.inventorymanagement.client.gui.screen.InventorySettingsScreen;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.InterModProcessEvent;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.apache.logging.log4j.LogManager;
@@ -32,10 +27,6 @@ public final class InventoryManagementMod {
         modEventBus.addListener(this::onConfigLoaded);
         modEventBus.addListener(this::onConfigReloaded);
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
-        if (FMLEnvironment.dist == Dist.CLIENT) {
-            NeoForge.EVENT_BUS.register(ClientBlockTracker.class);
-            modContainer.registerExtensionPoint(IConfigScreenFactory.class, (container, parent) -> new InventorySettingsScreen(parent));
-        }
         Networking.register(modEventBus);
         AutoRefillEvents.register();
     }
