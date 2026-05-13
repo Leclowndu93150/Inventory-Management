@@ -9,6 +9,8 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.Level;
@@ -22,7 +24,7 @@ public class AutoStackRefill {
     private static final List<QueuedFishingRod> checkFishingRodList = Collections.synchronizedList(new ArrayList<>());
     private static final List<QueuedItemCheck> checkItemUsedList = Collections.synchronizedList(new ArrayList<>());
 
-    public static void processTick(boolean isClientSide) {
+    public static void processTick() {
         try {
 
             if (!addSingleList.isEmpty()) {
@@ -39,7 +41,7 @@ public class AutoStackRefill {
                         }
                     }
                     refill.player.getInventory().setChanged();
-
+                    syncRefilledHand(refill.player, refill.hand);
 
                     refill.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                 }
@@ -56,6 +58,7 @@ public class AutoStackRefill {
                             check.player.setItemInHand(check.hand, slot.copy());
                             slot.setCount(0);
                             check.player.getInventory().setChanged();
+                            syncRefilledHand(check.player, check.hand);
 
                             check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                             break;
@@ -107,6 +110,7 @@ public class AutoStackRefill {
                                     }
 
                                     check.player.getInventory().setChanged();
+                                    syncRefilledHand(check.player, check.hand);
 
                                     check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                                     found = true;
@@ -125,6 +129,8 @@ public class AutoStackRefill {
                                             check.player.drop(handStack, false);
                                         }
                                     }
+                                    check.player.getInventory().setChanged();
+                                    syncRefilledHand(check.player, check.hand);
 
                                     check.player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                                 }
@@ -137,6 +143,9 @@ public class AutoStackRefill {
     }
 
     public static void onItemUse(Player player, ItemStack used, InteractionHand hand) {
+        if (!(player instanceof ServerPlayer)) {
+            return;
+        }
         if (!shouldRefill(player)) {
             return;
         }
@@ -149,6 +158,9 @@ public class AutoStackRefill {
     }
 
     public static void onItemBreak(Player player, ItemStack used, InteractionHand hand) {
+        if (!(player instanceof ServerPlayer)) {
+            return;
+        }
         if (!shouldRefill(player) || used == null || hand == null) {
             return;
         }
@@ -180,11 +192,15 @@ public class AutoStackRefill {
             ItemStack fromShulker = findInShulkerBoxes(player, usedItem, used);
             if (!fromShulker.isEmpty()) {
                 addSingleList.add(new QueuedRefill(player, fromShulker, hand));
+                player.getInventory().setChanged();
             }
         }
     }
 
     public static void onItemToss(Player player, ItemStack tossedStack) {
+        if (!(player instanceof ServerPlayer)) {
+            return;
+        }
         if (!shouldRefill(player)) {
             return;
         }
@@ -211,6 +227,7 @@ public class AutoStackRefill {
                 player.setItemInHand(InteractionHand.MAIN_HAND, slot.copy());
                 slot.setCount(0);
                 player.getInventory().setChanged();
+                syncRefilledHand(player, InteractionHand.MAIN_HAND);
 
                 player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
                 found = true;
@@ -222,12 +239,17 @@ public class AutoStackRefill {
             ItemStack fromShulker = findInShulkerBoxes(player, tossedItem, tossedStack);
             if (!fromShulker.isEmpty()) {
                 player.setItemInHand(InteractionHand.MAIN_HAND, fromShulker);
+                player.getInventory().setChanged();
+                syncRefilledHand(player, InteractionHand.MAIN_HAND);
                 player.playSound(SoundEvents.ITEM_PICKUP, 0.2F, 1.0F);
             }
         }
     }
 
     public static void onItemRightClick(Player player, Level world, InteractionHand hand) {
+        if (!(player instanceof ServerPlayer)) {
+            return;
+        }
         ItemStack stack = player.getItemInHand(hand);
         if (!shouldRefill(player)) {
             return;
@@ -249,6 +271,9 @@ public class AutoStackRefill {
     }
 
     public static void onBlockRightClick(Level world, Player player, InteractionHand hand, BlockPos pos, BlockHitResult hitVec) {
+        if (!(player instanceof ServerPlayer)) {
+            return;
+        }
         if (!shouldRefill(player) || player.isUsingItem()) {
             return;
         }
@@ -261,6 +286,24 @@ public class AutoStackRefill {
         try {
             checkItemUsedList.add(new QueuedItemCheck(hand, player, active.copy()));
         } catch (ArrayIndexOutOfBoundsException ignored) {}
+    }
+
+    private static void syncRefilledHand(Player player, InteractionHand hand) {
+        if (!(player instanceof ServerPlayer serverPlayer)) {
+            return;
+        }
+
+        Inventory inventory = serverPlayer.getInventory();
+        int inventorySlot = hand == InteractionHand.MAIN_HAND ? inventory.selected : 40;
+        AbstractContainerMenu menu = serverPlayer.containerMenu;
+        for (int i = 0; i < menu.slots.size(); i++) {
+            Slot slot = menu.getSlot(i);
+            if (slot.container == inventory && slot.getContainerSlot() == inventorySlot) {
+                menu.setRemoteSlotNoCopy(i, ItemStack.EMPTY);
+                menu.broadcastChanges();
+                return;
+            }
+        }
     }
 
     private static boolean shouldRefill(Player player) {

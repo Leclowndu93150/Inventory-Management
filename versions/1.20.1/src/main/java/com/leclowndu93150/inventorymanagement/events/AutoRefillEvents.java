@@ -6,7 +6,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.item.ItemTossEvent;
@@ -14,7 +13,6 @@ import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.player.PlayerDestroyItemEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.loading.FMLEnvironment;
 
 import java.util.*;
 
@@ -24,10 +22,6 @@ public class AutoRefillEvents {
     public static void register() {
         MinecraftForge.EVENT_BUS.register(AutoRefillEvents.class);
 
-        if (FMLEnvironment.dist == Dist.CLIENT) {
-            MinecraftForge.EVENT_BUS.register(ClientEvents.class);
-        }
-
         InventoryManagementMod.LOGGER.info("AutoRefillEvents registered");
     }
 
@@ -36,13 +30,13 @@ public class AutoRefillEvents {
         if (event.phase != TickEvent.Phase.START) {
             return;
         }
-        AutoStackRefill.processTick(false);
+        AutoStackRefill.processTick();
     }
 
     @SubscribeEvent
     public static void onItemUseStart(LivingEntityUseItemEvent.Start event) {
         Entity entity = event.getEntity();
-        if (!(entity instanceof Player player)) {
+        if (!(entity instanceof Player player) || player.level().isClientSide) {
             return;
         }
 
@@ -60,7 +54,7 @@ public class AutoRefillEvents {
     @SubscribeEvent
     public static void onItemUseFinish(LivingEntityUseItemEvent.Finish event) {
         Entity entity = event.getEntity();
-        if (!(entity instanceof Player player)) {
+        if (!(entity instanceof Player player) || player.level().isClientSide) {
             return;
         }
 
@@ -77,6 +71,9 @@ public class AutoRefillEvents {
     @SubscribeEvent
     public static void onItemBreak(PlayerDestroyItemEvent event) {
         Player player = event.getEntity();
+        if (player.level().isClientSide) {
+            return;
+        }
         ItemStack broken = event.getOriginal();
         InteractionHand hand = event.getHand();
 
@@ -88,6 +85,9 @@ public class AutoRefillEvents {
     @SubscribeEvent
     public static void onItemToss(ItemTossEvent event) {
         Player player = event.getPlayer();
+        if (player.level().isClientSide) {
+            return;
+        }
         ItemStack tossed = event.getEntity().getItem();
 
         AutoStackRefill.onItemToss(player, tossed);
@@ -96,6 +96,9 @@ public class AutoRefillEvents {
     @SubscribeEvent
     public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
         Player player = event.getEntity();
+        if (event.getLevel().isClientSide) {
+            return;
+        }
         InteractionHand hand = event.getHand();
 
         AutoStackRefill.onItemRightClick(player, event.getLevel(), hand);
@@ -104,18 +107,11 @@ public class AutoRefillEvents {
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         Player player = event.getEntity();
+        if (event.getLevel().isClientSide) {
+            return;
+        }
         InteractionHand hand = event.getHand();
 
         AutoStackRefill.onBlockRightClick(event.getLevel(), player, hand, event.getPos(), event.getHitVec());
-    }
-
-    public static class ClientEvents {
-        @SubscribeEvent
-        public static void onClientTick(TickEvent.ClientTickEvent event) {
-            if (event.phase != TickEvent.Phase.START) {
-                return;
-            }
-            AutoStackRefill.processTick(true);
-        }
     }
 }
