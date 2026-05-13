@@ -9,25 +9,20 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 
 public class SortInventoryButton extends InventoryManagementButton {
-    private static final ResourceLocation TEXTURE = new ResourceLocation(
-            InventoryManagementMod.MOD_ID, "textures/gui/sort.png");
-    private static final ResourceLocation TEXTURE_HIGHLIGHTED = new ResourceLocation(
-            InventoryManagementMod.MOD_ID, "textures/gui/sort_highlighted.png");
+    private static final ResourceLocation TEXTURE = new ResourceLocation(InventoryManagementMod.MOD_ID, "textures/gui/sort.png");
+    private static final ResourceLocation TEXTURE_HIGHLIGHTED = new ResourceLocation(InventoryManagementMod.MOD_ID, "textures/gui/sort_highlighted.png");
 
     private final boolean isPlayerInventory;
 
     public SortInventoryButton(
             AbstractContainerScreen<?> parent,
-            Container inventory,
             Slot referenceSlot,
             InventoryManagementConfig.Position offset,
             boolean isPlayerInventory) {
         super(parent,
-                inventory,
                 referenceSlot,
                 offset,
                 isPlayerInventory,

@@ -6,27 +6,20 @@ import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 
 public class TransferAllButton extends InventoryManagementButton {
-    private static final ResourceLocation TEXTURE_FROM = new ResourceLocation(
-            InventoryManagementMod.MOD_ID, "textures/gui/transfer_from.png");
-    private static final ResourceLocation TEXTURE_FROM_HIGHLIGHTED = new ResourceLocation(
-            InventoryManagementMod.MOD_ID, "textures/gui/transfer_from_highlighted.png");
-    private static final ResourceLocation TEXTURE_TO = new ResourceLocation(
-            InventoryManagementMod.MOD_ID, "textures/gui/transfer_to.png");
-    private static final ResourceLocation TEXTURE_TO_HIGHLIGHTED = new ResourceLocation(
-            InventoryManagementMod.MOD_ID, "textures/gui/transfer_to_highlighted.png");
+    private static final ResourceLocation TEXTURE_FROM = new ResourceLocation(InventoryManagementMod.MOD_ID, "textures/gui/transfer_from.png");
+    private static final ResourceLocation TEXTURE_FROM_HIGHLIGHTED = new ResourceLocation(InventoryManagementMod.MOD_ID, "textures/gui/transfer_from_highlighted.png");
+    private static final ResourceLocation TEXTURE_TO = new ResourceLocation(InventoryManagementMod.MOD_ID, "textures/gui/transfer_to.png");
+    private static final ResourceLocation TEXTURE_TO_HIGHLIGHTED = new ResourceLocation(InventoryManagementMod.MOD_ID, "textures/gui/transfer_to_highlighted.png");
 
     public TransferAllButton(
             AbstractContainerScreen<?> parent,
-            Container inventory,
             Slot referenceSlot,
             InventoryManagementConfig.Position offset,
             boolean fromPlayerInventory) {
         super(parent,
-                inventory,
                 referenceSlot,
                 offset,
                 fromPlayerInventory,

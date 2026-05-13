@@ -7,7 +7,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 
 public class SettingsButton extends InventoryManagementButton {
@@ -18,11 +17,9 @@ public class SettingsButton extends InventoryManagementButton {
 
     public SettingsButton(
             AbstractContainerScreen<?> parent,
-            Container inventory,
             Slot referenceSlot,
             InventoryManagementConfig.Position offset) {
         super(parent,
-                inventory,
                 referenceSlot,
                 offset,
                 true,

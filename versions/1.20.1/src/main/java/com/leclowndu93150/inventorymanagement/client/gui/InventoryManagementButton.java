@@ -13,7 +13,6 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 
 public abstract class InventoryManagementButton extends Button {
@@ -30,7 +29,6 @@ public abstract class InventoryManagementButton extends Button {
 
     protected InventoryManagementButton(
             AbstractContainerScreen<?> parent,
-            Container inventory,
             Slot referenceSlot,
             InventoryManagementConfig.Position offset,
             boolean isPlayerInventory,

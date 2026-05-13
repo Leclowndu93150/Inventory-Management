@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "com.leclowndu93150"
-version = "1.0.6"
+version = "1.0.7"
 
 prism {
     metadata {
@@ -50,6 +50,7 @@ prism {
                 modRuntimeOnly("curse.maven:ellies-storage-options-1225370:6483390")
                 modRuntimeOnly("curse.maven:kotlin-for-forge-351264:6497906")
                 modRuntimeOnly("curse.maven:iron-chests-228756:5491156")
+                modRuntimeOnly("curse.maven:metal-barrels-324985:6111347")
             }
         }
     }

@@ -6,7 +6,6 @@ import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 
 public class TransferAllButton extends InventoryManagementButton {
@@ -21,12 +20,10 @@ public class TransferAllButton extends InventoryManagementButton {
 
     public TransferAllButton(
             AbstractContainerScreen<?> parent,
-            Container inventory,
             Slot referenceSlot,
             InventoryManagementConfig.Position offset,
             boolean fromPlayerInventory) {
         super(parent,
-                inventory,
                 referenceSlot,
                 offset,
                 fromPlayerInventory,

@@ -9,7 +9,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 
 public class SortInventoryButton extends InventoryManagementButton {
@@ -22,12 +21,10 @@ public class SortInventoryButton extends InventoryManagementButton {
 
     public SortInventoryButton(
             AbstractContainerScreen<?> parent,
-            Container inventory,
             Slot referenceSlot,
             InventoryManagementConfig.Position offset,
             boolean isPlayerInventory) {
         super(parent,
-                inventory,
                 referenceSlot,
                 offset,
                 isPlayerInventory,

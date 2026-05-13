@@ -1,21 +1,19 @@
 package com.leclowndu93150.inventorymanagement.compat;
 
+import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.SlotItemHandler;
-import net.neoforged.neoforge.items.wrapper.InvWrapper;
-import net.neoforged.neoforge.items.wrapper.SidedInvWrapper;
 
-import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -26,10 +24,6 @@ public class ModCompatibilityManager {
     private final Set<String> knownStorageContainers = new HashSet<>();
     private final Set<String> blacklistedContainers = new HashSet<>();
 
-    // Cache detection results to avoid repeated analysis
-    private final Map<String, Boolean> detectionCache = new WeakHashMap<>();
-    private final Map<String, ContainerAnalysis> analysisCache = new WeakHashMap<>();
-
     private ModCompatibilityManager() {
         registerDefaultOverrides();
     }
@@ -39,7 +33,6 @@ public class ModCompatibilityManager {
     }
 
     private void registerDefaultOverrides() {
-        // Applied Energistics 2 and addons
         blacklistPattern("appeng.client.gui.implementations.*Screen");
         blacklistPattern("appeng.client.gui.me.items.*Screen");
         blacklistPattern("de.mari_023.ae2wtlib.wct.*Screen");
@@ -49,31 +42,25 @@ public class ModCompatibilityManager {
         blacklistPattern("gripe._90.megacells.menu.MEGAInterfaceMenu");
         blacklistPattern("net.pedroksl.advanced_ae.client.gui.*");
 
-        // Integrated Dynamics/Terminals
         blacklistPattern("org.cyclops.integrateddynamics.inventory.container.*");
         blacklistPattern("org.cyclops.integratedterminals.inventory.container.ContainerTerminalStoragePart");
 
-        // Refined Storage
         blacklistPattern("com.refinedmods.refinedstorage.screen.*");
         blacklistPattern("com.refinedmods.refinedstorage.common.content.*Screen");
 
-        // Sophisticated Backpacks/Storage
         blacklistPattern("net.p3pp3rf1y.sophisticatedbackpacks.common.gui.BackpackContainer");
         blacklistPattern("net.p3pp3rf1y.sophisticatedstorage.common.gui.StorageContainerMenu");
 
-        // Storage mods with special handling
         blacklistPattern("tfar.craftingstation.CraftingStationMenu");
         blacklistPattern("tfar.dankstorage.container.DankContainers");
         blacklistPattern("mcjty.rftoolsutility.modules.crafter.blocks.CrafterContainer");
 
-        // Tech mods
         blacklistPattern("cofh.thermal.core.client.gui.*");
         blacklistPattern("com.direwolf20.justdirethings.client.screens.*");
         blacklistPattern("com.direwolf20.laserio.client.screens.*");
         blacklistPattern("aztech.modern_industrialization.*.gui.*Screen");
         blacklistPattern("com.enderio.machines.common.blocks.*Menu");
 
-        // Others
         blacklistPattern("cy.jdkdigital.productivebees.container.gui.*");
         blacklistPattern("cy.jdkdigital.productivetrees.inventory.screen.*");
         blacklistPattern("com.stal111.forbidden_arcanus.client.gui.screen.*");
@@ -83,40 +70,39 @@ public class ModCompatibilityManager {
         blacklistPattern("thedarkcolour.gendustry.menu.*");
         blacklistPattern("se.mickelus.tetra.blocks.workbench.*");
 
-        // Vanilla
         blacklistPattern("net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen*");
 
-        // Storage Drawers - special case
+        registerPattern("net.minecraft.world.inventory.ChestMenu", ContainerOverride.allowAll());
+        registerPattern("net.minecraft.world.inventory.ShulkerBoxMenu", ContainerOverride.allowAll());
+        registerPattern("net.minecraft.world.inventory.HopperMenu", ContainerOverride.create(true, false, false));
+        registerPattern("net.minecraft.world.inventory.HorseInventoryMenu", ContainerOverride.allowAll());
+
         if (ModList.get().isLoaded("storagedrawers")) {
             blacklistPattern("com.jaquadro.minecraft.storagedrawers.*");
         }
 
-        // Iron Furnaces (only sort slots 0-45)
         if (ModList.get().isLoaded("ironfurnaces")) {
             registerPattern("ironfurnaces.gui.furnaces.*", ContainerOverride.create(true, true, false));
         }
 
-        // Known good storage mods
         if (ModList.get().isLoaded("ironchest")) {
             knownStorageContainers.add("com.progwml6.ironchest");
         }
 
         if (ModList.get().isLoaded("metalbarrels")) {
-            knownStorageContainers.add("com.tfar.metalbarrels");
+            knownStorageContainers.add("tfar.metalbarrels");
         }
 
         if (ModList.get().isLoaded("expandedstorage")) {
             knownStorageContainers.add("ninjaphenix.expandedstorage");
         }
 
-        // Create
         if (ModList.get().isLoaded("create")) {
             registerPattern("com.simibubi.create.content.logistics.depot.*", ContainerOverride.allowAll());
             registerPattern("com.simibubi.create.content.logistics.vault.*", ContainerOverride.allowAll());
             blacklistPattern("com.simibubi.create.content.contraptions.*");
         }
 
-        // Quark
         if (ModList.get().isLoaded("quark")) {
             knownStorageContainers.add("vazkii.quark.content.management.module");
         }
@@ -130,45 +116,25 @@ public class ModCompatibilityManager {
         blacklistedContainers.add(pattern);
     }
 
+    public boolean isStorageGroup(ContainerAnalyzer.SlotGroup group, AbstractContainerMenu menu, String screenClass) {
+        return canUseGroup(group, menu, screenClass, Capability.SORT);
+    }
+
+    public boolean canTransferItems(ContainerAnalyzer.SlotGroup group, AbstractContainerMenu menu, String screenClass) {
+        return canUseGroup(group, menu, screenClass, Capability.TRANSFER);
+    }
+
+    public boolean canAutoStack(ContainerAnalyzer.SlotGroup group, AbstractContainerMenu menu, String screenClass) {
+        return canUseGroup(group, menu, screenClass, Capability.STACK);
+    }
+
     public boolean isStorageContainer(Container container, AbstractContainerMenu menu) {
         return isStorageContainer(container, menu, null);
     }
 
     public boolean isStorageContainer(Container container, AbstractContainerMenu menu, String screenClass) {
-        if (container instanceof Inventory) return false;
-
-        String containerClass = container.getClass().getName();
-        String menuClass = menu.getClass().getName();
-        String cacheKey = containerClass + "|" + menuClass + "|" + (screenClass != null ? screenClass : "");
-
-        Boolean cached = detectionCache.get(cacheKey);
-        if (cached != null) return cached;
-
-        for (String pattern : blacklistedContainers) {
-            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern) ||
-                    (screenClass != null && matchesPattern(screenClass, pattern))) {
-                detectionCache.put(cacheKey, false);
-                return false;
-            }
-        }
-
-        for (String known : knownStorageContainers) {
-            if (containerClass.startsWith(known)) {
-                detectionCache.put(cacheKey, true);
-                return true;
-            }
-        }
-
-        ContainerOverride override = getOverride(containerClass, menuClass, screenClass);
-        if (override != null) {
-            boolean result = override.allowSort();
-            detectionCache.put(cacheKey, result);
-            return result;
-        }
-
-        boolean result = analyzeContainer(container, menu);
-        detectionCache.put(cacheKey, result);
-        return result;
+        ContainerAnalyzer.SlotGroup group = findGroup(container, menu).orElse(null);
+        return group != null && isStorageGroup(group, menu, screenClass);
     }
 
     public boolean canTransferItems(Container container, AbstractContainerMenu menu) {
@@ -176,22 +142,8 @@ public class ModCompatibilityManager {
     }
 
     public boolean canTransferItems(Container container, AbstractContainerMenu menu, String screenClass) {
-        String containerClass = container.getClass().getName();
-        String menuClass = menu.getClass().getName();
-
-        for (String pattern : blacklistedContainers) {
-            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern) ||
-                    (screenClass != null && matchesPattern(screenClass, pattern))) {
-                return false;
-            }
-        }
-
-        ContainerOverride override = getOverride(containerClass, menuClass, screenClass);
-        if (override != null) {
-            return override.allowTransfer();
-        }
-
-        return isStorageContainer(container, menu, screenClass);
+        ContainerAnalyzer.SlotGroup group = findGroup(container, menu).orElse(null);
+        return group != null && canTransferItems(group, menu, screenClass);
     }
 
     public boolean canAutoStack(Container container, AbstractContainerMenu menu) {
@@ -199,33 +151,128 @@ public class ModCompatibilityManager {
     }
 
     public boolean canAutoStack(Container container, AbstractContainerMenu menu, String screenClass) {
-        String containerClass = container.getClass().getName();
-        String menuClass = menu.getClass().getName();
-
-        for (String pattern : blacklistedContainers) {
-            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern) ||
-                    (screenClass != null && matchesPattern(screenClass, pattern))) {
-                return false;
-            }
-        }
-
-        ContainerOverride override = getOverride(containerClass, menuClass, screenClass);
-        if (override != null) {
-            return override.allowStack();
-        }
-
-        return isStorageContainer(container, menu, screenClass);
+        ContainerAnalyzer.SlotGroup group = findGroup(container, menu).orElse(null);
+        return group != null && canAutoStack(group, menu, screenClass);
     }
 
-    private ContainerOverride getOverride(String containerClass, String menuClass, String screenClass) {
+    public ContainerAnalysis getAnalysis(Container container, AbstractContainerMenu menu) {
+        return findGroup(container, menu)
+                .map(group -> getAnalysis(group, menu))
+                .orElseGet(ContainerAnalysis::new);
+    }
+
+    public ContainerAnalysis getAnalysis(ContainerAnalyzer.SlotGroup group, AbstractContainerMenu menu) {
+        ContainerAnalysis analysis = new ContainerAnalysis();
+        analysis.handleClass = group.handle().getClass().getName();
+        analysis.containerClass = group.asContainer() != null ? group.asContainer().getClass().getName() : "";
+        analysis.menuClass = menu.getClass().getName();
+        analysis.totalSlots = group.slotCount();
+        analysis.isSimpleContainer = group.handle() instanceof SimpleContainer;
+        analysis.isBlockEntity = group.handle() instanceof BaseContainerBlockEntity;
+        analysis.hasItemHandlerCapability = group.isItemHandler();
+        analysis.hasItemHandlerSlots = group.isItemHandler();
+        analysis.isHomogeneous = group.menuSlots().stream()
+                .map(slot -> slot.getClass().getName())
+                .distinct()
+                .count() <= 1;
+        analysis.slotTypes = group.menuSlots().stream()
+                .map(slot -> slot.getClass().getName())
+                .distinct()
+                .collect(Collectors.toList());
+        analysis.isStorageCandidate = isDefaultStorageCandidate(group);
+        analysis.isKnownStorage = matchesKnownStorage(group, menu, null);
+        analysis.isBlacklisted = isBlacklisted(group, menu, null);
+        analysis.isModifiable = group.isModifiable();
+        return analysis;
+    }
+
+    private Optional<ContainerAnalyzer.SlotGroup> findGroup(Container container, AbstractContainerMenu menu) {
+        return ContainerAnalyzer.analyze(menu).groups().stream()
+                .filter(group -> group.handle() == container)
+                .findFirst();
+    }
+
+    private boolean canUseGroup(ContainerAnalyzer.SlotGroup group, AbstractContainerMenu menu, String screenClass, Capability capability) {
+        if (group == null || group.isCraftingInventory() || group.isResultInventory()) {
+            return false;
+        }
+
+        if (group.isPlayerInventory()) {
+            return true;
+        }
+
+        if (isBlacklisted(group, menu, screenClass)) {
+            return false;
+        }
+
+        ContainerOverride override = getOverride(group, menu, screenClass);
+        if (override != null) {
+            return switch (capability) {
+                case SORT -> override.allowSort();
+                case TRANSFER -> override.allowTransfer();
+                case STACK -> override.allowStack();
+            };
+        }
+
+        if (matchesKnownStorage(group, menu, screenClass)) {
+            return true;
+        }
+
+        return isDefaultStorageCandidate(group);
+    }
+
+    private boolean isDefaultStorageCandidate(ContainerAnalyzer.SlotGroup group) {
+        if (group.isPlayerInventory() || group.isCraftingInventory() || group.isResultInventory()) {
+            return false;
+        }
+
+        if (group.slotCount() < getMinSlotsForDetection()) {
+            return false;
+        }
+
+        if (group.handle() instanceof BaseContainerBlockEntity || group.handle() instanceof SimpleContainer) {
+            return true;
+        }
+
+        return group.isItemHandler();
+    }
+
+    private int getMinSlotsForDetection() {
+        try {
+            return InventoryManagementConfig.getInstance().minSlotsForDetection.get();
+        } catch (Exception e) {
+            return 9;
+        }
+    }
+
+    private boolean isBlacklisted(ContainerAnalyzer.SlotGroup group, AbstractContainerMenu menu, String screenClass) {
+        return blacklistedContainers.stream().anyMatch(pattern -> matchesAny(group, menu, screenClass, pattern));
+    }
+
+    private boolean matchesKnownStorage(ContainerAnalyzer.SlotGroup group, AbstractContainerMenu menu, String screenClass) {
+        return knownStorageContainers.stream().anyMatch(pattern -> matchesAny(group, menu, screenClass, pattern + "*"));
+    }
+
+    private ContainerOverride getOverride(ContainerAnalyzer.SlotGroup group, AbstractContainerMenu menu, String screenClass) {
         for (Map.Entry<String, ContainerOverride> entry : containerOverrides.entrySet()) {
-            String pattern = entry.getKey();
-            if (matchesPattern(containerClass, pattern) || matchesPattern(menuClass, pattern) ||
-                    (screenClass != null && matchesPattern(screenClass, pattern))) {
+            if (matchesAny(group, menu, screenClass, entry.getKey())) {
                 return entry.getValue();
             }
         }
         return null;
+    }
+
+    private boolean matchesAny(ContainerAnalyzer.SlotGroup group, AbstractContainerMenu menu, String screenClass, String pattern) {
+        if (matchesPattern(group.handle().getClass().getName(), pattern) || matchesPattern(menu.getClass().getName(), pattern)) {
+            return true;
+        }
+
+        Container container = group.asContainer();
+        if (container != null && matchesPattern(container.getClass().getName(), pattern)) {
+            return true;
+        }
+
+        return screenClass != null && matchesPattern(screenClass, pattern);
     }
 
     private boolean matchesPattern(String className, String pattern) {
@@ -234,135 +281,10 @@ public class ModCompatibilityManager {
         return Pattern.matches(regex, className);
     }
 
-    public ContainerAnalysis getAnalysis(Container container, AbstractContainerMenu menu) {
-        String key = container.getClass().getName() + "|" + menu.getClass().getName();
-        ContainerAnalysis cached = analysisCache.get(key);
-        if (cached != null) return cached;
-
-        ContainerAnalysis analysis = performAnalysis(container, menu);
-        analysisCache.put(key, analysis);
-        return analysis;
-    }
-
-    private ContainerAnalysis performAnalysis(Container container, AbstractContainerMenu menu) {
-        ContainerAnalysis analysis = new ContainerAnalysis();
-        analysis.containerClass = container.getClass().getName();
-        analysis.menuClass = menu.getClass().getName();
-
-        List<Slot> containerSlots = menu.slots.stream()
-                .filter(slot -> slot.container == container)
-                .collect(Collectors.toList());
-
-        analysis.totalSlots = containerSlots.size();
-
-        // Check if it extends known good base classes
-        if (container instanceof SimpleContainer) {
-            analysis.isSimpleContainer = true;
-        }
-        if (container instanceof BaseContainerBlockEntity) {
-            analysis.isBlockEntity = true;
-        }
-
-        // Check for wrapped inventories
-        if (container instanceof InvWrapper) {
-            analysis.isWrappedInventory = true;
-            try {
-                Field invField = InvWrapper.class.getDeclaredField("inv");
-                invField.setAccessible(true);
-                Object wrapped = invField.get(container);
-                analysis.wrappedType = wrapped.getClass().getName();
-            } catch (Exception e) {
-                // Ignore
-            }
-        }
-        if (container instanceof SidedInvWrapper) {
-            analysis.isSidedWrapper = true;
-        }
-
-        analysis.hasItemHandlerSlots = containerSlots.stream()
-                .anyMatch(slot -> slot instanceof SlotItemHandler);
-
-        analysis.slotTypes = containerSlots.stream()
-                .map(slot -> slot.getClass().getName())
-                .distinct()
-                .collect(Collectors.toList());
-        analysis.isHomogeneous = analysis.slotTypes.size() == 1;
-
-        ItemStack[] testItems = {
-                new ItemStack(Items.COBBLESTONE),
-                new ItemStack(Items.DIRT),
-                new ItemStack(Items.OAK_LOG),
-                new ItemStack(Items.IRON_INGOT),
-                new ItemStack(Items.APPLE),
-                new ItemStack(Items.DIAMOND_PICKAXE)
-        };
-
-        for (ItemStack testItem : testItems) {
-            long acceptingSlots = containerSlots.stream()
-                    .filter(slot -> slot.mayPlace(testItem))
-                    .count();
-            analysis.itemAcceptance.put(testItem.getItem().toString(),
-                    (double) acceptingSlots / containerSlots.size());
-        }
-
-        // Calculate acceptance rate
-        analysis.averageAcceptanceRate = analysis.itemAcceptance.values().stream()
-                .mapToDouble(Double::doubleValue)
-                .average()
-                .orElse(0.0);
-
-        try {
-            // Try to detect if container implements or wraps IItemHandler
-            if (hasItemHandlerCapability(container)) {
-                analysis.hasItemHandlerCapability = true;
-            }
-        } catch (Exception e) {
-            // Ignore
-        }
-
-        return analysis;
-    }
-
-    private boolean hasItemHandlerCapability(Container container) {
-        Class<?> clazz = container.getClass();
-
-        for (Class<?> iface : clazz.getInterfaces()) {
-            if (IItemHandler.class.isAssignableFrom(iface)) {
-                return true;
-            }
-        }
-
-        for (Field field : clazz.getDeclaredFields()) {
-            if (IItemHandler.class.isAssignableFrom(field.getType())) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private boolean analyzeContainer(Container container, AbstractContainerMenu menu) {
-        ContainerAnalysis analysis = getAnalysis(container, menu);
-
-        if (analysis.totalSlots < 9) {
-            return false;
-        }
-
-        if (analysis.isBlockEntity || analysis.isWrappedInventory) {
-            return true;
-        }
-
-        // Accept if has IItemHandler capability
-        if (analysis.hasItemHandlerCapability || analysis.hasItemHandlerSlots) {
-            return analysis.averageAcceptanceRate >= 0.5;
-        }
-
-        // For SimpleContainer, check acceptance rate
-        if (analysis.isSimpleContainer) {
-            return analysis.averageAcceptanceRate >= 0.75;
-        }
-
-        return analysis.isHomogeneous && analysis.averageAcceptanceRate >= 0.6;
+    private enum Capability {
+        SORT,
+        TRANSFER,
+        STACK
     }
 
     public static class ContainerOverride {
@@ -388,12 +310,21 @@ public class ModCompatibilityManager {
             return new ContainerOverride(false, false, false);
         }
 
-        public boolean allowSort() { return allowSort; }
-        public boolean allowTransfer() { return allowTransfer; }
-        public boolean allowStack() { return allowStack; }
+        public boolean allowSort() {
+            return allowSort;
+        }
+
+        public boolean allowTransfer() {
+            return allowTransfer;
+        }
+
+        public boolean allowStack() {
+            return allowStack;
+        }
     }
 
     public static class ContainerAnalysis {
+        public String handleClass = "";
         public String containerClass = "";
         public String menuClass = "";
         public int totalSlots = 0;
@@ -405,8 +336,11 @@ public class ModCompatibilityManager {
         public boolean hasItemHandlerSlots = false;
         public boolean hasItemHandlerCapability = false;
         public boolean isHomogeneous = false;
+        public boolean isStorageCandidate = false;
+        public boolean isKnownStorage = false;
+        public boolean isBlacklisted = false;
+        public boolean isModifiable = false;
         public List<String> slotTypes = new ArrayList<>();
-        public Map<String, Double> itemAcceptance = new LinkedHashMap<>();
         public double averageAcceptanceRate = 0.0;
     }
 }

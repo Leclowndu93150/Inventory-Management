@@ -5,26 +5,23 @@ import com.leclowndu93150.inventorymanagement.client.gui.InventoryManagementButt
 import com.leclowndu93150.inventorymanagement.client.gui.SettingsButton;
 import com.leclowndu93150.inventorymanagement.client.gui.SortInventoryButton;
 import com.leclowndu93150.inventorymanagement.client.gui.TransferAllButton;
+import com.leclowndu93150.inventorymanagement.compat.ContainerAnalyzer;
 import com.leclowndu93150.inventorymanagement.compat.ModCompatibilityManager;
 import com.leclowndu93150.inventorymanagement.config.InventoryManagementConfig;
-import com.leclowndu93150.inventorymanagement.inventory.InventoryHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.*;
-import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
+import net.minecraft.world.inventory.Slot;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 @OnlyIn(Dist.CLIENT)
 public class InventoryButtonsManager {
@@ -37,44 +34,6 @@ public class InventoryButtonsManager {
 
     private final LinkedHashSet<InventoryManagementButton> playerButtons = new LinkedHashSet<>();
     private final LinkedHashSet<InventoryManagementButton> containerButtons = new LinkedHashSet<>();
-    private final HashSet<Class<? extends Container>> sortableInventories = new HashSet<>();
-    private final HashSet<Class<? extends Container>> transferableInventories = new HashSet<>();
-    private final HashSet<Class<? extends AbstractContainerMenu>> sortableScreenHandlers = new HashSet<>();
-    private final HashSet<Class<? extends AbstractContainerMenu>> transferableScreenHandlers = new HashSet<>();
-
-    private InventoryButtonsManager() {
-        // Vanilla containers
-        this.registerSortableContainer(Inventory.class);
-        this.registerSortableContainer(BaseContainerBlockEntity.class);
-
-        this.registerTransferableContainer(Inventory.class);
-        this.registerTransferableContainer(BaseContainerBlockEntity.class);
-
-        this.registerSimpleInventorySortableHandler(ChestMenu.class);
-        this.registerSimpleInventorySortableHandler(ShulkerBoxMenu.class);
-        this.registerSimpleInventorySortableHandler(HorseInventoryMenu.class);
-        this.registerSimpleInventorySortableHandler(HopperMenu.class);
-
-        this.registerSimpleInventoryTransferableHandler(ChestMenu.class);
-        this.registerSimpleInventoryTransferableHandler(ShulkerBoxMenu.class);
-        this.registerSimpleInventoryTransferableHandler(HorseInventoryMenu.class);
-    }
-
-    public void registerSortableContainer(Class<? extends Container> clazz) {
-        this.sortableInventories.add(clazz);
-    }
-
-    public void registerTransferableContainer(Class<? extends Container> clazz) {
-        this.transferableInventories.add(clazz);
-    }
-
-    public void registerSimpleInventorySortableHandler(Class<? extends AbstractContainerMenu> clazz) {
-        this.sortableScreenHandlers.add(clazz);
-    }
-
-    public void registerSimpleInventoryTransferableHandler(Class<? extends AbstractContainerMenu> clazz) {
-        this.transferableScreenHandlers.add(clazz);
-    }
 
     public void init(AbstractContainerScreen<?> screen, Consumer<GuiEventListener> addButton) {
         this.playerButtons.clear();
@@ -104,54 +63,28 @@ public class InventoryButtonsManager {
             return;
         }
 
-        Slot referenceSlot = this.getReferenceSlot(screen, isPlayerInventory);
-        if (referenceSlot == null) {
-            return;
-        }
-
         LocalPlayer player = MINECRAFT.player;
         if (player == null) {
             return;
         }
 
-        Container inventory = isPlayerInventory ? player.getInventory() : InventoryHelper.getContainerInventory(player);
-        if (inventory == null) {
+        ContainerAnalyzer.SlotGroup group = getGroup(screen, isPlayerInventory);
+        if (group == null || group.bulkSlots(false).size() < 3) {
             return;
         }
 
-        // Check if sorting is allowed for this container
-        boolean canSort = false;
         ModCompatibilityManager compatManager = ModCompatibilityManager.getInstance();
-        String screenClass = screen.getClass().getName();
-
-        if (inventory instanceof Inventory) {
-            canSort = true;
-        } else if (inventory instanceof SimpleContainer) {
-            // Vanilla simple containers
-            if (this.sortableScreenHandlers.stream().anyMatch(clazz -> clazz.isInstance(screen.getMenu()))) {
-                canSort = true;
-            } else {
-                canSort = compatManager.isStorageContainer(inventory, screen.getMenu(), screenClass);
-            }
-        } else {
-            // Other containers (vanilla or modded)
-            if (this.sortableInventories.stream().anyMatch(clazz -> clazz.isInstance(inventory))) {
-                canSort = true;
-            } else {
-                canSort = compatManager.isStorageContainer(inventory, screen.getMenu(), screenClass);
-            }
-        }
-
-        if (!canSort) {
+        if (!compatManager.isStorageGroup(group, screen.getMenu(), screen.getClass().getName()) || !group.canSort()) {
             return;
         }
 
-        if (this.getNumberOfBulkInventorySlots(screen, isPlayerInventory) < 3) {
+        Slot referenceSlot = this.getReferenceSlot(group);
+        if (referenceSlot == null) {
             return;
         }
 
         InventoryManagementConfig.Position position = this.getButtonPosition(screen, isPlayerInventory);
-        SortInventoryButton button = new SortInventoryButton(screen, inventory, referenceSlot, position, isPlayerInventory);
+        SortInventoryButton button = new SortInventoryButton(screen, referenceSlot, position, isPlayerInventory);
         addButton.accept(button);
         this.addButton(button, isPlayerInventory);
     }
@@ -166,39 +99,26 @@ public class InventoryButtonsManager {
             return;
         }
 
-        Slot referenceSlot = this.getReferenceSlot(screen, isPlayerInventory);
-        if (referenceSlot == null) {
-            return;
-        }
-
-        LocalPlayer player = MINECRAFT.player;
-        if (player == null) {
-            return;
-        }
-
-        Container fromInventory = isPlayerInventory ? InventoryHelper.getContainerInventory(player) : player.getInventory();
-        Container toInventory = isPlayerInventory ? player.getInventory() : InventoryHelper.getContainerInventory(player);
-        if (fromInventory == null || toInventory == null || fromInventory == toInventory) {
+        ContainerAnalyzer.SlotGroup playerGroup = ContainerAnalyzer.getPlayerInventoryGroup(screen.getMenu());
+        ContainerAnalyzer.SlotGroup containerGroup = ContainerAnalyzer.getContainerInventoryGroup(screen.getMenu());
+        if (playerGroup == null || containerGroup == null || containerGroup.bulkSlots(false).size() < 3) {
             return;
         }
 
         ModCompatibilityManager compatManager = ModCompatibilityManager.getInstance();
         String screenClass = screen.getClass().getName();
-        boolean canStackFrom = canUseInventory(fromInventory, screen,
-                inv -> compatManager.canAutoStack(inv, screen.getMenu(), screenClass));
-        boolean canStackTo = canUseInventory(toInventory, screen,
-                inv -> compatManager.canAutoStack(inv, screen.getMenu(), screenClass));
-
-        if (!canStackFrom || !canStackTo) {
+        if (!compatManager.canAutoStack(playerGroup, screen.getMenu(), screenClass) ||
+                !compatManager.canAutoStack(containerGroup, screen.getMenu(), screenClass)) {
             return;
         }
 
-        if (this.getNumberOfNonPlayerBulkInventorySlots(screen) < 3) {
+        Slot referenceSlot = this.getReferenceSlot(getGroup(screen, isPlayerInventory));
+        if (referenceSlot == null) {
             return;
         }
 
         InventoryManagementConfig.Position position = this.getButtonPosition(screen, isPlayerInventory);
-        AutoStackButton button = new AutoStackButton(screen, fromInventory, referenceSlot, position, isPlayerInventory);
+        AutoStackButton button = new AutoStackButton(screen, referenceSlot, position, isPlayerInventory);
         addButton.accept(button);
         this.addButton(button, isPlayerInventory);
     }
@@ -213,18 +133,14 @@ public class InventoryButtonsManager {
             return;
         }
 
-        Slot referenceSlot = this.getReferenceSlot(screen, true);
-        if (referenceSlot == null) {
-            return;
-        }
-
-        LocalPlayer player = MINECRAFT.player;
-        if (player == null) {
+        ContainerAnalyzer.SlotGroup group = ContainerAnalyzer.getPlayerInventoryGroup(screen.getMenu());
+        Slot referenceSlot = this.getReferenceSlot(group);
+        if (referenceSlot == null || MINECRAFT.player == null) {
             return;
         }
 
         InventoryManagementConfig.Position position = this.getButtonPosition(screen, true);
-        SettingsButton button = new SettingsButton(screen, player.getInventory(), referenceSlot, position);
+        SettingsButton button = new SettingsButton(screen, referenceSlot, position);
         addButton.accept(button);
         this.addButton(button, true);
     }
@@ -239,80 +155,48 @@ public class InventoryButtonsManager {
             return;
         }
 
-        Slot referenceSlot = this.getReferenceSlot(screen, isPlayerInventory);
-        if (referenceSlot == null) {
-            return;
-        }
-
-        LocalPlayer player = MINECRAFT.player;
-        if (player == null) {
-            return;
-        }
-
-        Container fromInventory = isPlayerInventory ? InventoryHelper.getContainerInventory(player) : player.getInventory();
-        Container toInventory = isPlayerInventory ? player.getInventory() : InventoryHelper.getContainerInventory(player);
-        if (fromInventory == null || toInventory == null || fromInventory == toInventory) {
+        ContainerAnalyzer.SlotGroup playerGroup = ContainerAnalyzer.getPlayerInventoryGroup(screen.getMenu());
+        ContainerAnalyzer.SlotGroup containerGroup = ContainerAnalyzer.getContainerInventoryGroup(screen.getMenu());
+        if (playerGroup == null || containerGroup == null || containerGroup.bulkSlots(false).size() < 3) {
             return;
         }
 
         ModCompatibilityManager compatManager = ModCompatibilityManager.getInstance();
         String screenClass = screen.getClass().getName();
-        boolean canTransferFrom = canUseInventory(fromInventory, screen,
-                inv -> compatManager.canTransferItems(inv, screen.getMenu(), screenClass));
-        boolean canTransferTo = canUseInventory(toInventory, screen,
-                inv -> compatManager.canTransferItems(inv, screen.getMenu(), screenClass));
-
-        if (!canTransferFrom || !canTransferTo) {
+        if (!compatManager.canTransferItems(playerGroup, screen.getMenu(), screenClass) ||
+                !compatManager.canTransferItems(containerGroup, screen.getMenu(), screenClass)) {
             return;
         }
 
-        if (this.getNumberOfNonPlayerBulkInventorySlots(screen) < 3) {
+        Slot referenceSlot = this.getReferenceSlot(getGroup(screen, isPlayerInventory));
+        if (referenceSlot == null) {
             return;
         }
 
         InventoryManagementConfig.Position position = this.getButtonPosition(screen, isPlayerInventory);
-        TransferAllButton button = new TransferAllButton(screen, fromInventory, referenceSlot, position, isPlayerInventory);
+        TransferAllButton button = new TransferAllButton(screen, referenceSlot, position, isPlayerInventory);
         addButton.accept(button);
         this.addButton(button, isPlayerInventory);
     }
 
-    private boolean canUseInventory(Container inventory, AbstractContainerScreen<?> screen, Predicate<Container> compatCheck) {
-        if (inventory instanceof Inventory) {
-            return true;
-        } else if (inventory instanceof SimpleContainer) {
-            return this.transferableScreenHandlers.stream().anyMatch(clazz -> clazz.isInstance(screen.getMenu()))
-                    || compatCheck.test(inventory);
-        } else {
-            return this.transferableInventories.stream().anyMatch(clazz -> clazz.isInstance(inventory))
-                    || compatCheck.test(inventory);
-        }
+    private ContainerAnalyzer.SlotGroup getGroup(AbstractContainerScreen<?> screen, boolean isPlayerInventory) {
+        return isPlayerInventory
+                ? ContainerAnalyzer.getPlayerInventoryGroup(screen.getMenu())
+                : ContainerAnalyzer.getContainerInventoryGroup(screen.getMenu());
     }
 
     private void addButton(InventoryManagementButton button, boolean isPlayerInventory) {
         (isPlayerInventory ? this.playerButtons : this.containerButtons).add(button);
     }
 
-    private Slot getReferenceSlot(AbstractContainerScreen<?> screen, boolean isPlayerInventory) {
-        return screen.getMenu().slots.stream()
-                .filter(slot -> isPlayerInventory == (slot.container instanceof Inventory))
+    private Slot getReferenceSlot(ContainerAnalyzer.SlotGroup group) {
+        if (group == null) {
+            return null;
+        }
+
+        return group.bulkSlots(true).stream()
                 .max(Comparator.comparingInt(slot -> slot.x - slot.y))
                 .orElse(null);
-    }
-
-    private int getNumberOfBulkInventorySlots(AbstractContainerScreen<?> screen, boolean isPlayerInventory) {
-        return screen.getMenu().slots.stream()
-                .filter(slot -> isPlayerInventory == (slot.container instanceof Inventory))
-                .filter(slot -> !(screen.getMenu() instanceof HorseInventoryMenu) || slot.getSlotIndex() >= 2)
-                .mapToInt(slot -> 1)
-                .sum();
-    }
-
-    private int getNumberOfNonPlayerBulkInventorySlots(AbstractContainerScreen<?> screen) {
-        return screen.getMenu().slots.stream()
-                .filter(slot -> !(slot.container instanceof Inventory))
-                .filter(slot -> !(screen.getMenu() instanceof HorseInventoryMenu) || slot.getSlotIndex() >= 2)
-                .mapToInt(slot -> 1)
-                .sum();
     }
 
     private InventoryManagementConfig.Position getButtonPosition(AbstractContainerScreen<?> screen, boolean isPlayerInventory) {

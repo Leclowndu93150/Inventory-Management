@@ -2,18 +2,15 @@ package com.leclowndu93150.inventorymanagement.debug;
 
 import com.leclowndu93150.inventorymanagement.compat.ContainerAnalyzer;
 import com.leclowndu93150.inventorymanagement.compat.ModCompatibilityManager;
-import com.leclowndu93150.inventorymanagement.inventory.InventoryHelper;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class DebugManager {
     private static boolean debugMode = false;
@@ -68,32 +65,31 @@ public class DebugManager {
         info.screenClass = screen.getClass().getName();
         info.menuClass = screen.getMenu().getClass().getName();
 
-        // Container analysis
-        Map<Container, ContainerAnalyzer.ContainerInfo> containers = ContainerAnalyzer.analyzeMenu(screen.getMenu());
-        info.containerCount = containers.size();
+        ContainerAnalyzer.AnalysisResult analysisResult = ContainerAnalyzer.analyze(screen.getMenu());
+        info.containerCount = analysisResult.groups().size();
 
         ModCompatibilityManager compatManager = ModCompatibilityManager.getInstance();
 
-        for (Map.Entry<Container, ContainerAnalyzer.ContainerInfo> entry : containers.entrySet()) {
-            Container container = entry.getKey();
-            ContainerAnalyzer.ContainerInfo containerInfo = entry.getValue();
-
+        for (ContainerAnalyzer.SlotGroup group : analysisResult.groups()) {
             ContainerDebugInfo cdi = new ContainerDebugInfo();
-            cdi.containerClass = container.getClass().getName();
-            cdi.slotCount = containerInfo.getSlotCount();
-            cdi.isPlayerInventory = container instanceof Inventory;
-            cdi.isHomogeneous = containerInfo.isHomogeneous();
-            cdi.isItemHandler = containerInfo.isItemHandler();
+            cdi.containerClass = group.handle().getClass().getName();
+            cdi.slotCount = group.slotCount();
+            cdi.isPlayerInventory = group.handle() instanceof Inventory;
+            cdi.isHomogeneous = group.menuSlots().stream()
+                    .map(slot -> slot.getClass().getName())
+                    .distinct()
+                    .count() <= 1;
+            cdi.isItemHandler = group.isItemHandler();
 
             // Check compatibility
             if (!cdi.isPlayerInventory) {
-                cdi.canSort = compatManager.isStorageContainer(container, screen.getMenu(), info.screenClass);
-                cdi.canTransfer = compatManager.canTransferItems(container, screen.getMenu(), info.screenClass);
-                cdi.canStack = compatManager.canAutoStack(container, screen.getMenu(), info.screenClass);
+                cdi.canSort = compatManager.isStorageGroup(group, screen.getMenu(), info.screenClass);
+                cdi.canTransfer = compatManager.canTransferItems(group, screen.getMenu(), info.screenClass);
+                cdi.canStack = compatManager.canAutoStack(group, screen.getMenu(), info.screenClass);
 
                 // Get detailed analysis if verbose
                 if (verboseMode) {
-                    cdi.analysis = compatManager.getAnalysis(container, screen.getMenu());
+                    cdi.analysis = compatManager.getAnalysis(group, screen.getMenu());
                 }
             }
 
@@ -101,10 +97,8 @@ public class DebugManager {
         }
 
         // Check active container
-        Container activeContainer = InventoryHelper.getContainerInventory(Minecraft.getInstance().player);
-        if (activeContainer != null) {
-            info.activeContainerClass = activeContainer.getClass().getName();
-        }
+        ContainerAnalyzer.SlotGroup activeGroup = ContainerAnalyzer.getContainerInventoryGroup(screen.getMenu());
+        info.activeContainerClass = activeGroup != null ? activeGroup.handle().getClass().getName() : null;
 
         return info;
     }
@@ -273,31 +267,10 @@ public class DebugManager {
                 .append(Component.literal(String.valueOf(analysis.slotTypes.size()))
                         .withStyle(ChatFormatting.LIGHT_PURPLE)));
 
-        // Acceptance rate
-        mc.player.sendSystemMessage(Component.literal("    Acceptance: ")
+        mc.player.sendSystemMessage(Component.literal("    Candidate: ")
                 .withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(String.format("%.1f%%", analysis.averageAcceptanceRate * 100))
-                        .withStyle(getAcceptanceColor(analysis.averageAcceptanceRate))));
-
-        // Item acceptance details
-        if (!analysis.itemAcceptance.isEmpty()) {
-            mc.player.sendSystemMessage(Component.literal("    Item Tests:")
-                    .withStyle(ChatFormatting.GRAY));
-            for (Map.Entry<String, Double> entry : analysis.itemAcceptance.entrySet()) {
-                String itemName = entry.getKey().substring(entry.getKey().lastIndexOf('.') + 1);
-                mc.player.sendSystemMessage(Component.literal("      " + itemName + ": ")
-                        .withStyle(ChatFormatting.DARK_GRAY)
-                        .append(Component.literal(String.format("%.0f%%", entry.getValue() * 100))
-                                .withStyle(getAcceptanceColor(entry.getValue()))));
-            }
-        }
-    }
-
-    private static ChatFormatting getAcceptanceColor(double rate) {
-        if (rate >= 0.75) return ChatFormatting.GREEN;
-        if (rate >= 0.5) return ChatFormatting.YELLOW;
-        if (rate >= 0.25) return ChatFormatting.GOLD;
-        return ChatFormatting.RED;
+                .append(Component.literal(String.valueOf(analysis.isStorageCandidate))
+                        .withStyle(analysis.isStorageCandidate ? ChatFormatting.GREEN : ChatFormatting.RED)));
     }
 
     private static String getSimpleClassName(String fullClassName) {
