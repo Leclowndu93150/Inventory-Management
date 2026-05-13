@@ -28,17 +28,17 @@ import org.lwjgl.glfw.GLFW;
 
 @Mod.EventBusSubscriber(modid = InventoryManagementMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class InventoryManagementClientMod {
-//    public static final Lazy<KeyMapping> POSITION_EDIT_PLAYER = Lazy.of(() -> new KeyMapping(
-//            "inventorymanagement.keybind.position_edit.player",
-//            GLFW.GLFW_KEY_K,
-//            "inventorymanagement.keybind.category"
-//    ));
-//
-//    public static final Lazy<KeyMapping> POSITION_EDIT_CONTAINER = Lazy.of(() -> new KeyMapping(
-//            "inventorymanagement.keybind.position_edit.container",
-//            GLFW.GLFW_KEY_L,
-//            "inventorymanagement.keybind.category"
-//    ));
+    public static final Lazy<KeyMapping> POSITION_EDIT_PLAYER = Lazy.of(() -> new KeyMapping(
+            "inventorymanagement.keybind.position_edit.player",
+            GLFW.GLFW_KEY_K,
+            "inventorymanagement.keybind.category"
+    ));
+
+    public static final Lazy<KeyMapping> POSITION_EDIT_CONTAINER = Lazy.of(() -> new KeyMapping(
+            "inventorymanagement.keybind.position_edit.container",
+            GLFW.GLFW_KEY_L,
+            "inventorymanagement.keybind.category"
+    ));
 
     public static final Lazy<KeyMapping> SORT_PLAYER = Lazy.of(() -> new KeyMapping(
             "inventorymanagement.keybind.sort.player",
@@ -91,8 +91,8 @@ public class InventoryManagementClientMod {
 
     @SubscribeEvent
     public static void registerKeys(RegisterKeyMappingsEvent event) {
-//        event.register(POSITION_EDIT_PLAYER.get());
-//        event.register(POSITION_EDIT_CONTAINER.get());
+        event.register(POSITION_EDIT_PLAYER.get());
+        event.register(POSITION_EDIT_CONTAINER.get());
         event.register(SORT_PLAYER.get());
         event.register(SORT_CONTAINER.get());
         event.register(TRANSFER_TO_CONTAINER.get());
@@ -122,7 +122,13 @@ public class InventoryManagementClientMod {
                     .anyMatch(child -> child instanceof InventoryManagementButton);
             if (!hasButtons) return;
 
-            if (SORT_PLAYER.get().matches(event.getKeyCode(), event.getScanCode())) {
+            if (POSITION_EDIT_PLAYER.get().matches(event.getKeyCode(), event.getScanCode())) {
+                Minecraft.getInstance().setScreen(new PerScreenPositionEditScreen(screen, true));
+                event.setCanceled(true);
+            } else if (POSITION_EDIT_CONTAINER.get().matches(event.getKeyCode(), event.getScanCode())) {
+                Minecraft.getInstance().setScreen(new PerScreenPositionEditScreen(screen, false));
+                event.setCanceled(true);
+            } else if (SORT_PLAYER.get().matches(event.getKeyCode(), event.getScanCode())) {
                 ClientNetworking.sendSort(true, false);
                 playClickSound();
                 event.setCanceled(true);
@@ -151,16 +157,15 @@ public class InventoryManagementClientMod {
 
         @SubscribeEvent
         public static void onKeyInput(InputEvent.Key event) {
-            if (Minecraft.getInstance().screen == null) return;
+            Screen screen = Minecraft.getInstance().screen;
+            if (!(screen instanceof AbstractContainerScreen<?>)) return;
 
-//            if (POSITION_EDIT_PLAYER.get().matches(event.getKey(), event.getScanCode())) {
-//                Minecraft.getInstance().setScreen(new PerScreenPositionEditScreen(Minecraft.getInstance().screen, true));
-//            } else if (POSITION_EDIT_CONTAINER.get().matches(event.getKey(), event.getScanCode())) {
-//                Minecraft.getInstance().setScreen(new PerScreenPositionEditScreen(Minecraft.getInstance().screen, false));
-//            }
+            boolean hasButtons = screen.children().stream()
+                    .anyMatch(child -> child instanceof InventoryManagementButton);
+            if (!hasButtons) return;
 
             if (SETTINGS_SCREEN.get().matches(event.getKey(), event.getScanCode())) {
-                Minecraft.getInstance().setScreen(new InventorySettingsScreen(Minecraft.getInstance().screen));
+                Minecraft.getInstance().setScreen(new InventorySettingsScreen(screen));
             }
         }
 

@@ -179,10 +179,15 @@ public class InventoryManagementClientMod {
 
         @SubscribeEvent
         public static void onKeyInput(InputEvent.Key event) {
-            if (Minecraft.getInstance().screen == null) return;
+            Screen screen = Minecraft.getInstance().screen;
+            if (!(screen instanceof AbstractContainerScreen<?>)) return;
+
+            boolean hasButtons = screen.children().stream()
+                    .anyMatch(child -> child instanceof InventoryManagementButton);
+            if (!hasButtons) return;
 
             if (SETTINGS_SCREEN.get().matches(event.getKey(), event.getScanCode())) {
-                Minecraft.getInstance().setScreen(new InventorySettingsScreen(Minecraft.getInstance().screen));
+                Minecraft.getInstance().setScreen(new InventorySettingsScreen(screen));
             }
         }
         
